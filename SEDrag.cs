@@ -83,6 +83,7 @@ namespace SEDrag
 		public override void Init(MyObjectBuilder_EntityBase objectBuilder)
 		{
 			Entity.NeedsUpdate |= MyEntityUpdateEnum.EACH_FRAME;
+			//Entity.Flags |= EntityFlags.Sync;
 			
 		}
 
@@ -218,7 +219,7 @@ namespace SEDrag
 					return;
 				}
 
-				var center = grid.WorldToGridInteger(grid.Physics.CenterOfMassWorld);
+				var center = grid.WorldToGridInteger(Entity.Physics.CenterOfMassWorld);
 
 				double xadj = center.X;
 				double yadj = center.Y;
@@ -232,7 +233,6 @@ namespace SEDrag
 				generateParimeter(o_ymin, ref parim);
 				generateParimeter(o_zmax, ref parim);
 				generateParimeter(o_zmin, ref parim);
-
 
 				m_xmax = o_xmax;
 				m_xmin = o_xmin;
@@ -294,10 +294,9 @@ namespace SEDrag
 						p_grid.PositionAndOrientation = new VRage.MyPositionAndOrientation(grid.Physics.CenterOfMassWorld + Vector3.Multiply(Vector3.Normalize(Entity.Physics.LinearVelocity), 20), -Entity.WorldMatrix.Forward, Entity.WorldMatrix.Up);
 						p_grid.LinearVelocity = Entity.Physics.LinearVelocity;
                         MyAPIGateway.Entities.RemapObjectBuilder(p_grid);
-                         lightEntity = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(p_grid);
+                        lightEntity = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(p_grid);
 						lightEntity.CastShadows = false;
 						lightEntity.Flags |= EntityFlags.Visible;
-
 					}
 					else
 					{
@@ -360,7 +359,6 @@ namespace SEDrag
 				MyAPIGateway.Utilities.ShowMessage(Core.NAME, String.Format("{0}", ex.Message));
 				//Log.Info("Error");
 			}
-			
 		}
 
 		private double calcCenter(double t, int cnt)
@@ -400,18 +398,21 @@ namespace SEDrag
 		}
 		private void init_grid()
 		{
-			if(!init)
+			if (!Core.instance.isDedicated) Log.Info("init?");
+			if (!init)
 			{
+				if (!Core.instance.isDedicated) Log.Info("initing");
 				init = true;
 				grid.OnBlockAdded += blockChange;
 				grid.OnBlockRemoved += blockChange;
 				grid.OnClosing += onClose;
 				dirty = true;
 				dragBox = grid.LocalAABB;
+				if (!Core.instance.isDedicated) Log.Info("calc drag box?");
 				refreshDragBox();
 			}
-
 		}
+		
 
 		private void onClose(IMyEntity obj)
 		{
@@ -425,8 +426,13 @@ namespace SEDrag
 		public override void UpdateBeforeSimulation()
 		{
 			if (dontUpdate) return;
+			if (!Core.instance.isDedicated) Log.Info("instance?");
+			if (Core.instance == null)
+				return;
+			if (!Core.instance.isDedicated) Log.Info("Utilities null?");
 			if (MyAPIGateway.Utilities == null) return;
-			if (grid == null )
+			if (!Core.instance.isDedicated) Log.Info("cast as grid?");
+			if (grid == null)
 			{
 				if (Entity == null)
 					return;
@@ -435,14 +441,34 @@ namespace SEDrag
 				else
 					return;
 			}
-			if (grid.Physics == null) return;
+			if (!Core.instance.isDedicated) Log.Info("session check");
+			if (MyAPIGateway.Session == null || MyAPIGateway.Session.ControlledObject == null || MyAPIGateway.Session.ControlledObject.Entity == null || MyAPIGateway.Session.ControlledObject.Entity.Parent == null)
+			{
+				//fine
+			}
+			else
+			if (!(Core.instance.isServer || MyAPIGateway.Session.ControlledObject.Entity.Parent.EntityId == Entity.EntityId))
+			{
+				return;//save cycles
+			}
+			else
+			{
+				if (MyAPIGateway.Session.ControlledObject.Entity.Parent.EntityId == Entity.EntityId && Entity.Physics == null)
+				{
+					if (!Core.instance.isDedicated) Log.Info("TRUE :(");
+				}
+
+			}
+
+			if (!Core.instance.isDedicated) Log.Info("pass?");
+			if (Entity.Physics == null) return;
+			if (!Core.instance.isDedicated) Log.Info("Entity has physics");
 			if (!init) init_grid();
-			if (Core.instance == null)
-				return;
-
-			if (Core.instance.showCenterOfLift ) showLift();
-
-            List<long> removePlanets = new List<long>();
+			if (!Core.instance.isDedicated) Log.Info("grid init done?");
+			
+            if (Core.instance.showCenterOfLift ) showLift();
+			if (!Core.instance.isDedicated) Log.Info("search planets");
+			List<long> removePlanets = new List<long>();
 			var dragForce = Vector3.Zero;
 			float atmosphere = 0;
 
@@ -463,18 +489,20 @@ namespace SEDrag
 						atmosphere += planet.GetAirDensity(Entity.GetPosition());
 					}
 				}
-			
+				if (!Core.instance.isDedicated) Log.Info("callshowheat");
 				showheat();
 
 				//1370 is melt tempw
+				if (!Core.instance.isDedicated) Log.Info("loseheat?");
 				heatLoss(atmosphere);
-                if (atmosphere < 0.05f)
+				if (!Core.instance.isDedicated) Log.Info("Atmo?");
+				if (atmosphere < 0.05f)
 					return;
-
-				if (Entity.Physics == null || Entity.Physics.LinearVelocity == Vector3D.Zero)
+				if (!Core.instance.isDedicated) Log.Info("Has physics? has LV?");
+				if (Entity.Physics.LinearVelocity == Vector3D.Zero)
 					return;//not moving
 						   //refreshPlanets();
-
+				if (!Core.instance.isDedicated) Log.Info("Begin drag compute.");
 				dragForce = -Entity.Physics.LinearVelocity;
 				
 				Vector3 dragNormal = Vector3.Normalize(dragForce);
@@ -508,7 +536,7 @@ namespace SEDrag
 				Vector3 liftright = Vector3.Multiply(Entity.WorldMatrix.Right,   l * Core.instance.settings.mult / 100 * adj);
 				Vector3 liftforw  = Vector3.Multiply(Entity.WorldMatrix.Forward, f * Core.instance.settings.mult / 100 * adj);
 
-
+				if (!Core.instance.isDedicated) Log.Info("advlift?");
 				if (Core.instance.settings.advancedlift)
 				{
 
@@ -516,21 +544,21 @@ namespace SEDrag
 					c_lift *= grid.LocalMatrix.GetOrientation();
 					var lift_adj = c_lift.Translation;
 					if ((liftforw + liftright + liftup).Length() > 10.0f)
-						grid.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, -(liftforw + liftright + liftup), (grid.WorldMatrix.Translation + c_lift.Translation), Vector3.Zero);
+						Entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, -(liftforw + liftright + liftup), (Entity.WorldMatrix.Translation + c_lift.Translation), Vector3.Zero);
 
 				}
 				else
 				{
 
 					if ((liftforw + liftright + liftup).Length() > 10.0f)
-						grid.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, -(liftforw + liftright + liftup), grid.Physics.CenterOfMassWorld, Vector3.Zero);
+						Entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, -(liftforw + liftright + liftup), Entity.Physics.CenterOfMassWorld, Vector3.Zero);
 				}
 
 				//if (dragForce.Length() > grid.Physics.Mass * 100 && grid.Physics.Mass > 0)
 				//	spin = Vector3.Multiply(MyUtils.GetRandomVector3Normalized(), dragForce.Length() / (grid.Physics.Mass * 100));
-
-				if (dragForce.Length() > 10.0f)//if force is too small, forget it. 
-					grid.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, dragForce, grid.Physics.CenterOfMassWorld, Vector3.Zero);
+				if (!Core.instance.isDedicated) Log.Info("Applying drag to ship");
+                if (dragForce.Length() > 10.0f)//if force is too small, forget it. 
+					Entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, dragForce, Entity.Physics.CenterOfMassWorld, Vector3.Zero);
 				applyHeat(-Vector3D.Multiply(Vector3D.Normalize(dragMatrix.Forward), c * Core.instance.settings.mult / 100 * adj), aw, ah, ad);
 
 				if (removePlanets.Count > 0)
@@ -548,6 +576,7 @@ namespace SEDrag
 			catch(Exception ex)
 			{
 				//Log.Info(ex.ToString());
+				if (!Core.instance.isDedicated) Log.Info(ex.ToString());
 			}
 		}
 
@@ -690,7 +719,7 @@ namespace SEDrag
 				return;
 			}
 
-			if (MyAPIGateway.Session.ControlledObject.Entity.Parent.EntityId == Entity.EntityId)
+			if (MyAPIGateway.Session.ControlledObject.Entity.Parent.EntityId == Entity.EntityId )
 			{
 				if (warn)
 					MyAPIGateway.Utilities.ShowNotification(String.Format("Heat Level: Warning {0:N0}", heat), 20, Sandbox.Common.MyFontEnum.White);
@@ -764,7 +793,6 @@ namespace SEDrag
 				//	break;
 				try
 				{
-
 					if (grid.Closed) return;
 					var block = kpair.Value;
 					if(block == null)
@@ -779,8 +807,6 @@ namespace SEDrag
 					grid.ApplyDestructionDeformation(block);
                     IMyDestroyableObject damagedBlock = block as IMyDestroyableObject;
 					damagedBlock.DoDamage(damage, Sandbox.Common.ObjectBuilders.Definitions.MyDamageType.Fire, true/*, hit, 0*/);
-					
-
 				}
 				catch
 				{
