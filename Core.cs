@@ -352,6 +352,7 @@ namespace SEDrag
 					return false; // no reason to add to the list
 				});
 				resolution = 1;
+				if (!Core.instance.isDedicated) Log.Info("Planet Count " + planets.Count.ToString());
 			}
 			else
 				resolution++;
