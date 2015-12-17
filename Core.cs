@@ -439,6 +439,7 @@ namespace SEDrag
 				});
 				Log.DebugWrite(DragSettings.DebugLevel.Info, string.Format("Found {0} planets.", planets.Count));
 				resolution = 1;
+				if (!Core.instance.isDedicated) Log.Info("Planet Count " + planets.Count.ToString());
 			}
 			else
 				resolution++;
