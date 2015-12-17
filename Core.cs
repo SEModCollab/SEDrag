@@ -32,7 +32,6 @@ namespace SEDrag
 		private bool sentHello = false;
 		private bool _registerClient = false;
 		private bool _registerServer = false;
-
 		public bool showCenterOfLift = false;
 		public static string NAME
 		{
