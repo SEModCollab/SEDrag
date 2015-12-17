@@ -7,7 +7,7 @@ using System.Text;
 using System;
 using Sandbox.Definitions;
 using Sandbox.Game.Entities;
-using SEDrag.Definition;
+
 namespace SEDrag
 {
 	[MySessionComponentDescriptor(MyUpdateOrder.AfterSimulation)]
@@ -32,8 +32,8 @@ namespace SEDrag
 		private bool sentHello = false;
 		private bool _registerClient = false;
 		private bool _registerServer = false;
+
 		public bool showCenterOfLift = false;
-		public LiftDefinition definitions = new LiftDefinition();
 		public static string NAME
 		{
 			get
@@ -53,8 +53,7 @@ namespace SEDrag
 			isServer = MyAPIGateway.Session.OnlineMode == MyOnlineModeEnum.OFFLINE || MyAPIGateway.Multiplayer.IsServer;
 			isDedicated = (MyAPIGateway.Utilities.IsDedicated && isServer);
 			settings = new DragSettings();
-			definitions.Init();//init definitions
-			definitions.Load();//load definitions.
+
 
 			MyAPIGateway.Utilities.MessageEntered -= MessageEntered;
 			MyAPIGateway.Utilities.MessageEntered += MessageEntered;
@@ -333,8 +332,11 @@ namespace SEDrag
 			{
 				unload();
 			}
-
-			if (resolution % 20000 == 0 || ( planets.Count == 0 && resolution % 60 == 0 ) ) // mod should only be run on a map with planets, otherwise whats the point?
+			if (MyAPIGateway.Session.Player == null)
+				return;
+			if (!sentHello)
+				sendHello();
+			if (resolution % 20000 == 0 || planets.Count == 0) // mod should only be run on a map with planets, otherwise whats the point?
 			{
 				HashSet<IMyEntity> ents = new HashSet<IMyEntity>();
 				if (MyDefinitionManager.Static.EnvironmentDefinition.SmallShipMaxSpeed > 100f)
@@ -355,10 +357,6 @@ namespace SEDrag
 			}
 			else
 				resolution++;
-			if (MyAPIGateway.Session.Player == null)
-				return;
-			if (!sentHello)
-				sendHello();
 		}
 
 		protected override void UnloadData()
@@ -376,7 +374,7 @@ namespace SEDrag
 			isDedicated = false;
 			settings = null;
 			//build branch only
-			//Log.Close();
+			Log.Close();
 			if (_registerServer)
 				MyAPIGateway.Multiplayer.UnregisterMessageHandler(HELLO_MSG, recieveHello);
 			if(_registerClient)
