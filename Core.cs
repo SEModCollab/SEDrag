@@ -373,7 +373,8 @@ namespace SEDrag
 			isServer = false;
 			isDedicated = false;
 			settings = null;
-			//Log.Close();
+			//build branch only
+			Log.Close();
 			if (_registerServer)
 				MyAPIGateway.Multiplayer.UnregisterMessageHandler(HELLO_MSG, recieveHello);
 			if(_registerClient)
