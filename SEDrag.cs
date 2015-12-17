@@ -22,8 +22,6 @@ namespace SEDrag
 	{
 		int resolution = 200;
 		IMyCubeGrid grid = null;
-		//float small_max = 104.4f;
-		//float large_max = 104.4f;
 		BoundingBox dragBox;
 		private bool init = false;
 		private bool dirty = true;
@@ -131,7 +129,6 @@ namespace SEDrag
 						}
 					}
 
-					ignore = false;
 					var x = new side(e.Position.Y, e.Position.Z);
 					var y = new side(e.Position.X, e.Position.Z);
 					var z = new side(e.Position.Y, e.Position.X);
@@ -168,7 +165,6 @@ namespace SEDrag
 						ly.Add(y);
 						o_ymax.Add(y, e);
 						o_ymin.Add(y, e);
-
 					}
 					else
 					{
@@ -189,7 +185,6 @@ namespace SEDrag
 							}
 						}
 					}
-
 					if (!lz.Contains(z))
 					{
 						lz.Add(z);
@@ -224,7 +219,7 @@ namespace SEDrag
 				}
 
 				var center = grid.WorldToGridInteger(grid.Physics.CenterOfMassWorld);
-				
+
 				double xadj = center.X;
 				double yadj = center.Y;
 				double zadj = center.Z;
@@ -277,7 +272,6 @@ namespace SEDrag
 				MyAPIGateway.Utilities.ShowMessage(Core.NAME, "CenterOfLift_Y: " + centerOfLift.Y.ToString());
 				MyAPIGateway.Utilities.ShowMessage(Core.NAME, "CenterOfLift_Z: " + centerOfLift.Z.ToString());*/
 
-
 			}
 			else if (dirty)
 			{
@@ -326,10 +320,10 @@ namespace SEDrag
 							lgrid.LocalMatrix = mat;
 							lgrid.GetBlocks(l, delegate (IMySlimBlock e) {
 
-							if (e.FatBlock is IMyReflectorLight)
-							{
+								if (e.FatBlock is IMyReflectorLight)
+								{
 
-								//var color = MyMath.VectorFromColor(255,50,0);
+									//var color = MyMath.VectorFromColor(255,50,0);
 									int delta = (int)(heatDelta/4 > 25 ? 25 : heatDelta/4);
 									Color color = MyMath.VectorFromColor(255, (byte)(delta), 0, 100);
 									var light = (IMyReflectorLight)e.FatBlock;
@@ -339,7 +333,6 @@ namespace SEDrag
 										fatBlock.Intensity = Entity.Physics.LinearVelocity.Length();
 										fatBlock.Falloff = 2;
 									}*/
-									
 									//Log.Info("set intensity");
 									light.SetValueFloat("Intensity", (float)heatDelta/2);
 									light.SetValueFloat("Radius", grid.LocalAABB.Extents.Length() + 6);
@@ -350,10 +343,7 @@ namespace SEDrag
 								}
 								return false;
 							});
-							
-							//Log.Info("islight?");
-
-				}
+						}
 						else
 							lightEntity.Close();
 
@@ -376,9 +366,7 @@ namespace SEDrag
 		private double calcCenter(double t, int cnt)
 		{
 			if (cnt == 0) return 0.0f;
-
 			return Math.Sqrt(Math.Abs(t / cnt)) * ( t > 0 ? 1 : -1) ;
-
 		}
 
 		private void generateParimeter(Dictionary<side, IMySlimBlock> edge, ref Dictionary<allside, IMySlimBlock> parim)
@@ -398,10 +386,8 @@ namespace SEDrag
 		{
 			if(dirty)
 			{
-
 				//MyAPIGateway.Parallel.Start()  or MyAPIGateway.Parallel.StartBackground()
             }
-				
 		}
 		private void doDragBox()
 		{
@@ -878,7 +864,7 @@ namespace SEDrag
 			}
 			public override int GetHashCode()
 			{
-				return a.GetHashCode() ^ b.GetHashCode();
+				return a.GetHashCode() ^ b.GetHashCode() ^ c.GetHashCode();
 			}
 			public static bool operator ==(allside x, allside y)
 			{
