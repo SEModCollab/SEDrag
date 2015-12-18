@@ -352,7 +352,6 @@ namespace SEDrag
 					return false; // no reason to add to the list
 				});
 				resolution = 1;
-				if (!Core.instance.isDedicated) Log.Info("Planet Count " + planets.Count.ToString());
 			}
 			else
 				resolution++;
@@ -377,7 +376,7 @@ namespace SEDrag
 			isDedicated = false;
 			settings = null;
 			//build branch only
-			Log.Close();
+			//Log.Close();
 			if (_registerServer)
 				MyAPIGateway.Multiplayer.UnregisterMessageHandler(HELLO_MSG, recieveHello);
 			if(_registerClient)

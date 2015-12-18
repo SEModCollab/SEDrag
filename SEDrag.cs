@@ -282,6 +282,7 @@ namespace SEDrag
 
 		void refreshLightGrid()
 		{
+			if (Core.instance.isServer) return;
 			try
 			{
 				if (showlight )
@@ -398,17 +399,17 @@ namespace SEDrag
 		}
 		private void init_grid()
 		{
-			if (!Core.instance.isDedicated) Log.Info("init?");
+
 			if (!init)
 			{
-				if (!Core.instance.isDedicated) Log.Info("initing");
+
 				init = true;
 				grid.OnBlockAdded += blockChange;
 				grid.OnBlockRemoved += blockChange;
 				grid.OnClosing += onClose;
 				dirty = true;
 				dragBox = grid.LocalAABB;
-				if (!Core.instance.isDedicated) Log.Info("calc drag box?");
+
 				refreshDragBox();
 			}
 		}
@@ -426,12 +427,12 @@ namespace SEDrag
 		public override void UpdateBeforeSimulation()
 		{
 			if (dontUpdate) return;
-			if (!Core.instance.isDedicated) Log.Info("instance?");
+
 			if (Core.instance == null)
 				return;
-			if (!Core.instance.isDedicated) Log.Info("Utilities null?");
+
 			if (MyAPIGateway.Utilities == null) return;
-			if (!Core.instance.isDedicated) Log.Info("cast as grid?");
+
 			if (grid == null)
 			{
 				if (Entity == null)
@@ -441,7 +442,7 @@ namespace SEDrag
 				else
 					return;
 			}
-			if (!Core.instance.isDedicated) Log.Info("session check");
+
 			if (MyAPIGateway.Session == null || MyAPIGateway.Session.ControlledObject == null || MyAPIGateway.Session.ControlledObject.Entity == null || MyAPIGateway.Session.ControlledObject.Entity.Parent == null)
 			{
 				//fine
@@ -449,25 +450,29 @@ namespace SEDrag
 			else
 			if (!(Core.instance.isServer || MyAPIGateway.Session.ControlledObject.Entity.Parent.EntityId == Entity.EntityId))
 			{
+				//Entity.Physics.Enabled = false;//turn off?
 				return;//save cycles
 			}
 			else
 			{
 				if (MyAPIGateway.Session.ControlledObject.Entity.Parent.EntityId == Entity.EntityId && Entity.Physics == null)
 				{
-					if (!Core.instance.isDedicated) Log.Info("TRUE :(");
+
 				}
 
 			}
 
-			if (!Core.instance.isDedicated) Log.Info("pass?");
-			if (Entity.Physics == null) return;
-			if (!Core.instance.isDedicated) Log.Info("Entity has physics");
+			if (Entity.Physics == null) {
+				//if (!Core.instance.isDedicated) Log.Info("Attempting to enable.");
+				//Entity.Physics.Enabled = true;//attempt to enable?
+                return;
+			};
+
 			if (!init) init_grid();
-			if (!Core.instance.isDedicated) Log.Info("grid init done?");
+
 			
             if (Core.instance.showCenterOfLift ) showLift();
-			if (!Core.instance.isDedicated) Log.Info("search planets");
+
 			List<long> removePlanets = new List<long>();
 			var dragForce = Vector3.Zero;
 			float atmosphere = 0;
@@ -489,20 +494,20 @@ namespace SEDrag
 						atmosphere += planet.GetAirDensity(Entity.GetPosition());
 					}
 				}
-				if (!Core.instance.isDedicated) Log.Info("callshowheat");
+
 				showheat();
 
 				//1370 is melt tempw
-				if (!Core.instance.isDedicated) Log.Info("loseheat?");
+
 				heatLoss(atmosphere);
-				if (!Core.instance.isDedicated) Log.Info("Atmo?");
+
 				if (atmosphere < 0.05f)
 					return;
-				if (!Core.instance.isDedicated) Log.Info("Has physics? has LV?");
+
 				if (Entity.Physics.LinearVelocity == Vector3D.Zero)
 					return;//not moving
 						   //refreshPlanets();
-				if (!Core.instance.isDedicated) Log.Info("Begin drag compute.");
+
 				dragForce = -Entity.Physics.LinearVelocity;
 				
 				Vector3 dragNormal = Vector3.Normalize(dragForce);
@@ -536,7 +541,7 @@ namespace SEDrag
 				Vector3 liftright = Vector3.Multiply(Entity.WorldMatrix.Right,   l * Core.instance.settings.mult / 100 * adj);
 				Vector3 liftforw  = Vector3.Multiply(Entity.WorldMatrix.Forward, f * Core.instance.settings.mult / 100 * adj);
 
-				if (!Core.instance.isDedicated) Log.Info("advlift?");
+
 				if (Core.instance.settings.advancedlift)
 				{
 
@@ -556,7 +561,7 @@ namespace SEDrag
 
 				//if (dragForce.Length() > grid.Physics.Mass * 100 && grid.Physics.Mass > 0)
 				//	spin = Vector3.Multiply(MyUtils.GetRandomVector3Normalized(), dragForce.Length() / (grid.Physics.Mass * 100));
-				if (!Core.instance.isDedicated) Log.Info("Applying drag to ship");
+
                 if (dragForce.Length() > 10.0f)//if force is too small, forget it. 
 					Entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, dragForce, Entity.Physics.CenterOfMassWorld, Vector3.Zero);
 				applyHeat(-Vector3D.Multiply(Vector3D.Normalize(dragMatrix.Forward), c * Core.instance.settings.mult / 100 * adj), aw, ah, ad);
@@ -576,7 +581,7 @@ namespace SEDrag
 			catch(Exception ex)
 			{
 				//Log.Info(ex.ToString());
-				if (!Core.instance.isDedicated) Log.Info(ex.ToString());
+
 			}
 		}
 
