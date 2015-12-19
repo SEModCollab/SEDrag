@@ -9,6 +9,7 @@
 	/*
 	*	Logger written by Digi.
 	*	Some modifications by Draygo
+	*	Debugger introduced by Draygo
 	*/
 	class Log : MySessionComponentBase
 	{
@@ -40,7 +41,45 @@
 		{
 			Error(e.ToString());
 		}
+		public static void DebugWrite(DragSettings.DebugLevel _d, string msg)
+		{
+			if (Core.instance == null) return;
+			if (Core.instance.settings.debug == DragSettings.DebugLevel.None) return;
+			if (Core.instance.settings.debug == DragSettings.DebugLevel.Custom)
+			{
+				if (_d == DragSettings.DebugLevel.Custom) Info(msg);
+				return;
+			}
 
+			if(Core.instance.settings.debug == DragSettings.DebugLevel.Error)
+			{
+				if (_d == DragSettings.DebugLevel.Error)
+					Error(msg);
+				return;
+			}
+			if(Core.instance.settings.debug == DragSettings.DebugLevel.Info)
+			{
+				if (_d == DragSettings.DebugLevel.Error)
+					Error(msg);
+				if (_d == DragSettings.DebugLevel.Info)
+					Info(msg);
+				return;
+			}
+			if (Core.instance.settings.debug == DragSettings.DebugLevel.Verbose)
+			{
+				if (_d == DragSettings.DebugLevel.Error)
+					Error(msg);
+				if (_d == DragSettings.DebugLevel.Info)
+					Info(msg);
+				if (_d == DragSettings.DebugLevel.Verbose)
+					Info("*" + msg);
+				return;
+			}
+		}
+		public static void DebugWrite<T>(DragSettings.DebugLevel _d, T msg)
+		{
+			DebugWrite(_d, msg.ToString());
+		}
 		public static void Error(string msg)
 		{
 			Info("ERROR: " + msg);

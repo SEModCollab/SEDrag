@@ -6,6 +6,15 @@
 		private int m_radMult = 500;
 		private bool m_lift = false;
 		private bool m_heat = true;
+		private DebugLevel logLevel = DebugLevel.None;
+		public enum DebugLevel
+		{
+			None = 0,
+			Error,
+			Info,
+			Verbose,
+			Custom
+		}
 		//private bool m_autolift = false;
 		public bool advancedlift
 		{
@@ -29,6 +38,11 @@
 				m_autolift = value;
 			}
 		}*/
+		public DebugLevel debug
+		{
+			get { return logLevel; }
+			set { logLevel = value; }
+		}
 		public int mult
 		{
 			get
