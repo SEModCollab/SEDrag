@@ -7,7 +7,7 @@ using System.Text;
 using System;
 using Sandbox.Definitions;
 using Sandbox.Game.Entities;
-//using SEDrag.Definition;
+using SEDrag.Definition;
 namespace SEDrag
 {
 	[MySessionComponentDescriptor(MyUpdateOrder.AfterSimulation)]
@@ -34,6 +34,7 @@ namespace SEDrag
 		private bool _registerServer = false;
 		public bool showCenterOfLift = false;
 		//public LiftDefinition definitions = new LiftDefinition();
+		public HeatDefinition h_definitions = new HeatDefinition();
 		public static string NAME
 		{
 			get
@@ -52,8 +53,7 @@ namespace SEDrag
 			isServer = MyAPIGateway.Session.OnlineMode == MyOnlineModeEnum.OFFLINE || MyAPIGateway.Multiplayer.IsServer;
 			isDedicated = (MyAPIGateway.Utilities.IsDedicated && isServer);
 			//settings = new DragSettings();
-			//definitions.Init();//init definitions
-			//definitions.Load();//load definitions.
+
 
 			MyAPIGateway.Utilities.MessageEntered -= MessageEntered;
 			MyAPIGateway.Utilities.MessageEntered += MessageEntered;
@@ -99,6 +99,8 @@ namespace SEDrag
 
 			}
 			loadXML();
+			h_definitions.Init();//init definitions
+			h_definitions.Load();//load definitions.
 		}
 
 		private void recieveData(byte[] obj)
@@ -287,7 +289,7 @@ namespace SEDrag
 				}
 				if (msg.StartsWith("/drag-load", StringComparison.InvariantCultureIgnoreCase))
 				{
-					saveXML();
+					loadXML();
 					MyAPIGateway.Utilities.ShowMessage(MOD_NAME, "loaded");
 					return;
 				}
@@ -349,11 +351,13 @@ namespace SEDrag
 			writer.Write(MyAPIGateway.Utilities.SerializeToXML(instance.settings));
 			writer.Flush();
 			writer.Close();
+			h_definitions.Save();
 			Log.DebugWrite(DragSettings.DebugLevel.Info, "Save Complete");
 		}
 		public void loadXML(bool l_default = false)
 		{
 			Log.DebugWrite(DragSettings.DebugLevel.Info, "Loading XML");
+			h_definitions.Load(l_default);
 			try
 			{
 				if (MyAPIGateway.Utilities.FileExistsInLocalStorage(FILE, typeof(DragSettings)) && !l_default)
