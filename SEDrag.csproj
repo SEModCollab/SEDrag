@@ -80,6 +80,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Core.cs" />
+    <Compile Include="DragDefinition\DragData.cs" />
+    <Compile Include="DragDefinition\DragDefinition.cs" />
+    <Compile Include="HeatDefinition\HeatData.cs" />
+    <Compile Include="HeatDefinition\HeatDefinition.cs" />
     <Compile Include="LiftDefinition\LiftData.cs" />
     <Compile Include="LiftDefinition\LiftDefinition.cs" />
     <Compile Include="Log.cs" />
