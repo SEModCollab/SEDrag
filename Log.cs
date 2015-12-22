@@ -89,18 +89,6 @@
 				string text = MOD_NAME + " error - open %AppData%/SpaceEngineers/Storage/" + MyAPIGateway.Session.WorkshopId + "_" + MOD_NAME + "/" + LOG_FILE + " for details";
 
 				MyLog.Default.WriteLineAndConsole(text);
-
-				if (notify == null)
-				{
-					notify = MyAPIGateway.Utilities.CreateNotification(text, 10000, MyFontEnum.Red);
-				}
-				else
-				{
-					notify.Text = text;
-					notify.ResetAliveTime();
-				}
-
-				notify.Show();
 			}
 			catch (Exception e)
 			{

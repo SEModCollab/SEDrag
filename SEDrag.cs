@@ -14,6 +14,7 @@ using IMySlimBlock = Sandbox.ModAPI.IMySlimBlock;
 using Sandbox.ModAPI.Ingame;
 using Sandbox.ModAPI.Interfaces;
 using ParallelTasks;
+using SEDrag.Definition;
 
 namespace SEDrag
 {
@@ -39,6 +40,12 @@ namespace SEDrag
 		private Dictionary<side, IMySlimBlock> m_ymin = new Dictionary<side, IMySlimBlock>();
 		private Dictionary<side, IMySlimBlock> m_zmin = new Dictionary<side, IMySlimBlock>();
 
+		private Dictionary<side, string> m_s_xmax = new Dictionary<side, string>();
+		private Dictionary<side, string> m_s_ymax = new Dictionary<side, string>();
+		private Dictionary<side, string> m_s_zmax = new Dictionary<side, string>();
+		private Dictionary<side, string> m_s_xmin = new Dictionary<side, string>();
+		private Dictionary<side, string> m_s_ymin = new Dictionary<side, string>();
+		private Dictionary<side, string> m_s_zmin = new Dictionary<side, string>();
 		private double heat_f = 0;
 		private double heat_b = 0;
 		private double heat_l = 0;
@@ -100,6 +107,13 @@ namespace SEDrag
 			Dictionary<side, IMySlimBlock> o_xmin = new Dictionary<side, IMySlimBlock>();
 			Dictionary<side, IMySlimBlock> o_ymin = new Dictionary<side, IMySlimBlock>();
 			Dictionary<side, IMySlimBlock> o_zmin = new Dictionary<side, IMySlimBlock>();
+
+			Dictionary<side, string> s_xmax = new Dictionary<side, string>();
+			Dictionary<side, string> s_ymax = new Dictionary<side, string>();
+			Dictionary<side, string> s_zmax = new Dictionary<side, string>();
+			Dictionary<side, string> s_xmin = new Dictionary<side, string>();
+			Dictionary<side, string> s_ymin = new Dictionary<side, string>();
+			Dictionary<side, string> s_zmin = new Dictionary<side, string>();
 			Vector3D _centerOfLift = Vector3D.Zero;
 
 			double xadj = 0;
@@ -139,7 +153,7 @@ namespace SEDrag
 						}
 					}
 
-					var x = new side(e.Position.Y, e.Position.Z);
+                    var x = new side(e.Position.Y, e.Position.Z);
 					var y = new side(e.Position.X, e.Position.Z);
 					var z = new side(e.Position.Y, e.Position.X);
 
@@ -238,6 +252,12 @@ namespace SEDrag
 				zadj = center.Z;
 				//get parimeter blocks
 
+				subtypeCache(ref o_xmax, out s_xmax);
+				subtypeCache(ref o_ymax, out s_ymax);
+				subtypeCache(ref o_zmax, out s_zmax);
+				subtypeCache(ref o_xmin, out s_xmin);
+				subtypeCache(ref o_ymin, out s_ymin);
+				subtypeCache(ref o_zmin, out s_zmin);
 
 				generateParimeter(o_xmax, ref parim);
 				generateParimeter(o_xmin, ref parim);
@@ -280,8 +300,6 @@ namespace SEDrag
 			MyAPIGateway.Utilities.InvokeOnGameThread(() => {
 				try
 				{
-
-
 					centerOfLift = _centerOfLift;
 					m_xmax = o_xmax;
 					m_xmin = o_xmin;
@@ -289,9 +307,14 @@ namespace SEDrag
 					m_ymin = o_ymin;
 					m_zmax = o_zmax;
 					m_zmin = o_zmin;
+					m_s_xmax = s_xmax;
+					m_s_ymax = s_ymax;
+					m_s_zmax = s_zmax;
+					m_s_xmin = s_xmin;
+					m_s_ymin = s_ymin;
+					m_s_zmin = s_zmin;
 					parimeterBlocks = parim;
 
-					//centerOfLift = -centerOfLift;//invert
 					Log.DebugWrite(DragSettings.DebugLevel.Info, string.Format("Entity ID: {0} Update:", Entity.EntityId));
 					Log.DebugWrite(DragSettings.DebugLevel.Info, string.Format("  center: {1}",Entity.EntityId, center.ToString()));
 					Log.DebugWrite(DragSettings.DebugLevel.Info, string.Format("  {0} Max: {1} - {0} Min: {2} Adj: {3}", "X", grid.Max.X, grid.Min.X, xadj));
@@ -310,6 +333,16 @@ namespace SEDrag
 			
 
 
+		}
+
+		private void subtypeCache(ref Dictionary<side, IMySlimBlock> input, out Dictionary<side, string> result)
+		{
+			var cont = new Dictionary<side, string>();
+			foreach (KeyValuePair<side, IMySlimBlock> kpair in input)
+			{
+				cont.Add(kpair.Key, kpair.Value.GetCopyObjectBuilder().SubtypeName);
+			}
+			result = cont;
 		}
 
 		void refreshLightGrid()
@@ -417,7 +450,7 @@ namespace SEDrag
 
 			if(dirty && task.IsComplete && lastupdate <= 0)
 			{
-				lastupdate = 60;
+				lastupdate = 15;
 				dirty = false;
 				task = MyAPIGateway.Parallel.Start(refreshDragBox, calcComplete);
 				//MyAPIGateway.Parallel.Start()  or MyAPIGateway.Parallel.StartBackground()
@@ -773,10 +806,7 @@ namespace SEDrag
 				if (warn)
 					MyAPIGateway.Utilities.ShowNotification(String.Format("Heat Level: Warning {0:N0}", heat), 20, Sandbox.Common.MyFontEnum.White);
 				else if (critical)
-				{
 					MyAPIGateway.Utilities.ShowNotification(String.Format("Heat Level: Critical {0:N0}", heat), 20, Sandbox.Common.MyFontEnum.Red);
-					
-				}
 				else if (heat > 250)
 					MyAPIGateway.Utilities.ShowNotification(String.Format("Heat Level: {0:N0}", heat), 20, Sandbox.Common.MyFontEnum.White);
 			}
@@ -789,51 +819,32 @@ namespace SEDrag
 
 			tick = 0;
 			if (heat_f > 750)
-			{
-				applyDamage(heat_f, m_zmax);
-			}
+				applyDamage(heat_f, ref m_zmax, m_s_zmax, Base6Directions.Direction.Forward);
 			if (heat_b > 750)
-			{
-
-				applyDamage(heat_b, m_zmin);
-			}
+				applyDamage(heat_b, ref m_zmin, m_s_zmin, Base6Directions.Direction.Backward);
 			if (heat_l > 750)
-			{
-
-				applyDamage(heat_l, m_xmin);
-			}
+				applyDamage(heat_l, ref m_xmin, m_s_xmin, Base6Directions.Direction.Left);
 			if (heat_r > 750)
-			{
-
-				applyDamage(heat_r, m_xmax);
-			}
+				applyDamage(heat_r, ref m_xmax, m_s_xmax, Base6Directions.Direction.Right);
 			if (heat_u > 750)
-			{
-
-				applyDamage(heat_u, m_ymax);
-			}
+				applyDamage(heat_u, ref m_ymax, m_s_ymax, Base6Directions.Direction.Up);
 			if (heat_d > 750)
-			{
-
-				applyDamage(heat_d, m_ymin);
-			}
+				applyDamage(heat_d, ref m_ymin, m_s_ymin, Base6Directions.Direction.Down);
 		}
 
-		private void applyDamage(double dmg, Dictionary<side, IMySlimBlock> blocks)
+		private void applyDamage(double dmg, ref Dictionary<side, IMySlimBlock> blocks, Dictionary<side, string> subtypeCache, Base6Directions.Direction dir)
 		{
 			if (!Core.instance.isServer)//server only
 				return;
-			float damage = (float)(dmg - 750);
-			damage /= 100;
-			damage += 1;
-			damage *= 3;
-			damage *= (float)m_rand.NextDouble();
-			if (damage < 0) return;
+
+			double min = 0;
+			double mult = 1.0;
+			HeatData data;
 			List<side> keylist = new List<side>();
 			//var hit = new Sandbox.Common.ModAPI.MyHitInfo();
 			//hit.Position = Entity.Physics.LinearVelocity + Entity.GetPosition();
 			//hit.Velocity = -Entity.Physics.LinearVelocity;
-
+			string subtype = "";
             foreach (KeyValuePair<side, IMySlimBlock> kpair in blocks)
 			{
 				//if (dirty)
@@ -844,8 +855,19 @@ namespace SEDrag
 					var block = kpair.Value;
 					if(block == null)
 					{
+						dirty = true;
 						keylist.Add(kpair.Key);
 						continue;
+					}
+					min = 750;
+					mult = 1.0;
+					if(subtypeCache.TryGetValue(kpair.Key, out subtype))
+					{
+						if(Core.instance.h_definitions.data.TryGetValue(subtype, out data))
+						{
+							min = data.getHeatTresh(dir);
+							mult = data.getHeatMult(dir);
+						}
 					}
 					/*if (block is IMyOxygenTank && block.CurrentDamage > 0.5f)
 					{
@@ -855,14 +877,21 @@ namespace SEDrag
 						//Log.DebugWrite(DragSettings.DebugLevel.Custom, string.Format("Tank found {0N2} {1:N2}", block.CurrentDamage, inv.CurrentVolume));
 						
 					}*/
+					
 					if (block.IsDestroyed)
 					{
 						dirty = true;
 						grid.RemoveDestroyedBlock(block);
 					}
-					grid.ApplyDestructionDeformation(block);
-                    IMyDestroyableObject damagedBlock = block as IMyDestroyableObject;
-					damagedBlock.DoDamage(damage, Sandbox.Common.ObjectBuilders.Definitions.MyDamageType.Fire, true/*, hit, 0*/);
+					float damage = (float)(dmg - min);
+					damage /= 100;
+					damage += 1;
+					damage *= 3;
+					//grid.ApplyDestructionDeformation(block);
+					var r_damage = damage * (float)m_rand.NextDouble();
+					if (damage < 0.0d) continue;
+					IMyDestroyableObject damagedBlock = block as IMyDestroyableObject;
+					damagedBlock.DoDamage(r_damage, Sandbox.Common.ObjectBuilders.Definitions.MyDamageType.Fire, true/*, hit, 0*/);
 				}
 				catch
 				{
@@ -874,6 +903,7 @@ namespace SEDrag
 			foreach(side key in keylist)
 			{
 				blocks.Remove(key);//clear
+				
 			}
         }
 
