@@ -287,6 +287,12 @@ namespace SEDrag
 					MyAPIGateway.Utilities.ShowMessage(MOD_NAME, "saved");
 					return;
 				}
+				if (msg.StartsWith("/drag-template", StringComparison.InvariantCultureIgnoreCase))
+				{
+					h_definitions.Save();
+					MyAPIGateway.Utilities.ShowMessage(MOD_NAME, "template saved");
+					return;
+				}
 				if (msg.StartsWith("/drag-load", StringComparison.InvariantCultureIgnoreCase))
 				{
 					loadXML();
@@ -351,7 +357,6 @@ namespace SEDrag
 			writer.Write(MyAPIGateway.Utilities.SerializeToXML(instance.settings));
 			writer.Flush();
 			writer.Close();
-			h_definitions.Save();
 			Log.DebugWrite(DragSettings.DebugLevel.Info, "Save Complete");
 		}
 		public void loadXML(bool l_default = false)
