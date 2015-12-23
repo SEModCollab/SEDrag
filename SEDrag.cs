@@ -294,7 +294,7 @@ namespace SEDrag
 				{
 					dirty = true;//failed update
 				});
-
+				return;
 			}
 
 			MyAPIGateway.Utilities.InvokeOnGameThread(() => {
@@ -386,23 +386,12 @@ namespace SEDrag
 
 								if (e.FatBlock is IMyReflectorLight)
 								{
-
-									//var color = MyMath.VectorFromColor(255,50,0);
 									int delta = (int)(heatDelta/4 > 25 ? 25 : heatDelta/4);
 									Color color = MyMath.VectorFromColor(255, (byte)(delta), 0, 100);
 									var light = (IMyReflectorLight)e.FatBlock;
-									/*if(e.FatBlock is Sandbox.Game.Entities.Blocks.MyLightingBlock)
-									{
-										var fatBlock = (Sandbox.Game.Entities.Blocks.MyLightingBlock)e.FatBlock;
-										fatBlock.Intensity = Entity.Physics.LinearVelocity.Length();
-										fatBlock.Falloff = 2;
-									}*/
-									//Log.Info("set intensity");
 									light.SetValueFloat("Intensity", (float)heatDelta/2);
 									light.SetValueFloat("Radius", grid.LocalAABB.Extents.Length() + 6);
-
 									light.SetValue("Color", color);
-									//light.SetColorMaskForSubparts(color);
 
 								}
 								return false;
@@ -446,14 +435,11 @@ namespace SEDrag
 
 		private void refreshBoxParallel()
 		{
-			//Log.DebugWrite(DragSettings.DebugLevel.Custom, Entity.EntityId + " " + task.IsComplete);
-
 			if(dirty && task.IsComplete && lastupdate <= 0)
 			{
-				lastupdate = 15;
+				lastupdate = 15;//4x a second if needed. Yea for other threads!
 				dirty = false;
 				task = MyAPIGateway.Parallel.Start(refreshDragBox, calcComplete);
-				//MyAPIGateway.Parallel.Start()  or MyAPIGateway.Parallel.StartBackground()
             }
 			else
 			{
@@ -474,7 +460,6 @@ namespace SEDrag
 			Log.DebugWrite(DragSettings.DebugLevel.Verbose, string.Format("Entity {0}: Init Grid", Entity.EntityId));
 			if (!init)
 			{
-
 				init = true;
 				grid.OnBlockAdded += blockChange;
 				grid.OnBlockRemoved += blockChange;
@@ -889,7 +874,7 @@ namespace SEDrag
 					damage *= 3;
 					//grid.ApplyDestructionDeformation(block);
 					var r_damage = damage * (float)m_rand.NextDouble();
-					if (damage < 0.0d) continue;
+					if (damage <= 0.0d) continue;
 					IMyDestroyableObject damagedBlock = block as IMyDestroyableObject;
 					damagedBlock.DoDamage(r_damage, Sandbox.Common.ObjectBuilders.Definitions.MyDamageType.Fire, true/*, hit, 0*/);
 				}
