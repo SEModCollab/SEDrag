@@ -357,7 +357,6 @@ namespace SEDrag
 			writer.Write(MyAPIGateway.Utilities.SerializeToXML(instance.settings));
 			writer.Flush();
 			writer.Close();
-			h_definitions.Save();
 			Log.DebugWrite(DragSettings.DebugLevel.Info, "Save Complete");
 		}
 		public void loadXML(bool l_default = false)
