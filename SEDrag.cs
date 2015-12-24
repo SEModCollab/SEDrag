@@ -871,7 +871,7 @@ namespace SEDrag
 					float damage = (float)(dmg - min);
 					damage /= 100;
 					damage += 1;
-					damage *= 3;
+					damage *= (3 * (float)mult);
 					//grid.ApplyDestructionDeformation(block);
 					var r_damage = damage * (float)m_rand.NextDouble();
 					if (damage <= 0.0d) continue;

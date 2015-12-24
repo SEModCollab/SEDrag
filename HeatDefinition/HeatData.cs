@@ -39,6 +39,16 @@ namespace SEDrag.Definition
 
 		//should have some variables for stabilization
 		//some for adjusting the center of lift. 
+		public HeatData()
+		{
+			heatThresh = 750;
+			heatMult = 1.0;
+		}
+		public HeatData(double multiplier, double threshhold)
+		{
+			heatThresh = threshhold;
+			heatMult = multiplier;
+		}
 
 		public Base6Directions.Direction front
 		{
@@ -49,6 +59,18 @@ namespace SEDrag.Definition
 		{
 			get { return m_top; }
 			set { m_top = value; }
+		}
+		public double heatThresh
+		{
+			set
+			{
+				m_heatThresh_f = (value >= 750.0 ? value : 750.0);
+				m_heatThresh_b = (value >= 750.0 ? value : 750.0);
+				m_heatThresh_u = (value >= 750.0 ? value : 750.0);
+				m_heatThresh_d = (value >= 750.0 ? value : 750.0);
+				m_heatThresh_l = (value >= 750.0 ? value : 750.0);
+				m_heatThresh_r = (value >= 750.0 ? value : 750.0);
+			}
 		}
 		public double heatThresh_f
 		{
@@ -81,7 +103,18 @@ namespace SEDrag.Definition
 			set { m_heatThresh_r = (value >= 750.0 ? value : 750.0); }
 		}
 
-
+		public double heatMult
+		{
+			set
+			{
+				m_heatMult_f = (value >= 0.0 ? value : 0.0);
+				m_heatMult_b = (value >= 0.0 ? value : 0.0);
+				m_heatMult_l = (value >= 0.0 ? value : 0.0);
+				m_heatMult_r = (value >= 0.0 ? value : 0.0);
+				m_heatMult_u = (value >= 0.0 ? value : 0.0);
+				m_heatMult_d = (value >= 0.0 ? value : 0.0);
+			}
+		}
 		public double heatMult_f
 		{
 			get { return m_heatMult_f; }
