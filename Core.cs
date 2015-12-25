@@ -362,7 +362,7 @@ namespace SEDrag
 		public void loadXML(bool l_default = false)
 		{
 			Log.DebugWrite(DragSettings.DebugLevel.Info, "Loading XML");
-			h_definitions.Load(l_default);
+			//h_definitions.Load(l_default);
 			try
 			{
 				if (MyAPIGateway.Utilities.FileExistsInLocalStorage(FILE, typeof(DragSettings)) && !l_default)
@@ -463,7 +463,7 @@ namespace SEDrag
 			isDedicated = false;
 			settings = null;
 			//All branch
-			
+			h_definitions.Close();
 			if (_registerServer)
 				MyAPIGateway.Multiplayer.UnregisterMessageHandler(HELLO_MSG, recieveHello);
 			if(_registerClient)

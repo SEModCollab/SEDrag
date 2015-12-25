@@ -11,6 +11,7 @@ using VRage.Components;
 using Sandbox.Definitions;
 using IMyCubeGrid = Sandbox.ModAPI.IMyCubeGrid;
 using IMySlimBlock = Sandbox.ModAPI.IMySlimBlock;
+using IMyTerminalBlock = Sandbox.ModAPI.IMyTerminalBlock;
 using Sandbox.ModAPI.Ingame;
 using Sandbox.ModAPI.Interfaces;
 using ParallelTasks;
@@ -27,6 +28,7 @@ namespace SEDrag
 		private IMyCubeGrid grid = null;
 		private BoundingBox dragBox;
 		private bool init = false;
+		private bool initcomplete = false;
 		private bool dirty = false;//we force an update in Init
 		private int lastupdate = 0;
 		private Vector3D centerOfLift = Vector3.Zero;
@@ -58,6 +60,8 @@ namespace SEDrag
 		private double drag = 0;
 		private Random m_rand = new Random((int)(DateTime.UtcNow.ToBinary()));
 		private IMyEntity lightEntity;
+		private IMyEntity centerEntity;
+		private IMyEntity massEntity;
 		private int tick = 0;
 		private double heatDelta = 0;
 		private Task task;
@@ -77,6 +81,15 @@ namespace SEDrag
 			}
 
 		}
+
+		public bool showcenter
+		{
+			get
+			{
+				return Core.instance.showCenterOfLift;
+			}
+		}
+
 		public override MyObjectBuilder_EntityBase GetObjectBuilder(bool copy = false)
 		{
 			return copy ? (MyObjectBuilder_EntityBase)objectBuilder.Clone() : objectBuilder;
@@ -141,14 +154,15 @@ namespace SEDrag
 				//MyAPIGateway.Utilities.ShowMessage(Core.NAME, "realcenter: " + comw.ToString());
 				grid.GetBlocks(blocks, delegate (IMySlimBlock e)
 				{
-
-					if (e is IMyInteriorLight)
+					if (ignore)
+						return false;
+					if (e.FatBlock != null)
 					{
-						var block = (IMyInteriorLight)e;
-						if (block.BlockDefinition.SubtypeName == "lightDummy")
+						if (e.FatBlock.BlockDefinition.SubtypeId == "lightDummy" || e.FatBlock.BlockDefinition.SubtypeName == "CenterOfLiftMarker")
 						{
-						//Log.Info("IGNORING GRID!");
-						ignore = true;
+							Log.DebugWrite(DragSettings.DebugLevel.Custom, string.Format("Subtype ignore: {1} {0}", Entity.EntityId, e.FatBlock.BlockDefinition.SubtypeName));
+							//Log.Info("IGNORING GRID!");
+							ignore = true;
 							return false;
 						}
 					}
@@ -241,6 +255,7 @@ namespace SEDrag
 					MyAPIGateway.Utilities.InvokeOnGameThread(() =>
 					{
 						dontUpdate = true;
+						dirty = true;
 					});
 					return;
 				}
@@ -281,12 +296,12 @@ namespace SEDrag
 
 				}
 				_centerOfLift = new Vector3D(calcCenter(t_x, lx.Count), calcCenter(t_y, ly.Count), calcCenter(t_z, lz.Count));
-
+				if (Math.Abs(_centerOfLift.X) < 1.5) _centerOfLift.X = 0;
+				if (Math.Abs(_centerOfLift.Y) < 1.5) _centerOfLift.Y = 0;
+				if (Math.Abs(_centerOfLift.Z) < 1.5) _centerOfLift.Z = 0;
 				_centerOfLift = Vector3D.Multiply(_centerOfLift, (grid.GridSizeEnum == MyCubeSize.Small ? 0.5d : 2.5d));
 				//centerOfLift += new Vector3D((grid.GridSizeEnum == MyCubeSize.Small ? 0.5f : 2.5f));
-				if (Math.Abs(centerOfLift.X) < 1.5) _centerOfLift.X = 0;
-				if (Math.Abs(centerOfLift.Y) < 1.5) _centerOfLift.Y = 0;
-				if (Math.Abs(centerOfLift.Z) < 1.5) _centerOfLift.Z = 0;
+
 			}
 			catch (Exception ex)
 			{
@@ -345,11 +360,116 @@ namespace SEDrag
 			result = cont;
 		}
 
-		void refreshLightGrid()
+		void refreshCenterOfLift()
 		{
 			try
 			{
-				if (showlight )
+				//Log.DebugWrite(DragSettings.DebugLevel.Custom, string.Format("Check: {4} {0} {1} {2} {3} {5}", showcenter, !dirty, !dontUpdate, !grid.Flags.HasFlag(~EntityFlags.Save), Entity.EntityId, initcomplete));
+				if (showcenter && !dontUpdate && initcomplete)
+				{
+					//Log.DebugWrite(DragSettings.DebugLevel.Custom, string.Format("Check: {0} {1}", centerEntity == null, (centerEntity == null || centerEntity.Closed)));
+					if (centerEntity == null || centerEntity.Closed)
+					{
+						//var def = MyDefinitionManager.Static.GetPrefabDefinitions();
+						var prefab = MyDefinitionManager.Static.GetPrefabDefinition("CenterOfLiftGhost");
+						var p_grid = prefab.CubeGrids[0];
+
+						Vector3D pos = Vector3D.Zero;
+						if(centerOfLift == Vector3D.Zero)
+							pos = grid.Physics.CenterOfMassWorld;
+						else
+							pos = grid.GridIntegerToWorld(grid.WorldToGridInteger(Entity.Physics.CenterOfMassWorld) + new Vector3I((int)centerOfLift.X, (int)centerOfLift.Y, (int)centerOfLift.Z));
+						p_grid.PositionAndOrientation = new VRage.MyPositionAndOrientation( pos, grid.LocalMatrix.Forward, grid.LocalMatrix.Up );
+						p_grid.LinearVelocity = Entity.Physics.LinearVelocity;
+                        MyAPIGateway.Entities.RemapObjectBuilder(p_grid);
+						centerEntity = MyAPIGateway.Entities.CreateFromObjectBuilder(p_grid);
+						//centerEntity = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(p_grid);
+						Log.DebugWrite(DragSettings.DebugLevel.Custom, string.Format("Check2: {0} ", centerEntity.EntityId));
+						centerEntity.CastShadows = false;
+						centerEntity.Flags |= EntityFlags.Visible;
+						centerEntity.Flags &= ~EntityFlags.Save;//do not save
+						centerEntity.Flags &= ~EntityFlags.Sync;//do not sync
+						centerEntity.Physics.Enabled = false;
+						MyAPIGateway.Entities.AddEntity(centerEntity);
+						//centerEntity.Physics.Deactivate();
+					}
+					else
+					{
+						
+						if (centerEntity is IMyCubeGrid)
+						{
+							var lgrid = (IMyCubeGrid)centerEntity;
+							List<IMySlimBlock> l = new List<IMySlimBlock>();
+							Vector3D pos = grid.GridIntegerToWorld(grid.WorldToGridInteger(Entity.Physics.CenterOfMassWorld) + new Vector3I((int)centerOfLift.X, (int)centerOfLift.Y, (int)centerOfLift.Z));
+							MatrixD mat = new MatrixD(grid.WorldMatrix);
+							mat.Translation = pos;
+                            lgrid.SetWorldMatrix(mat);
+						}
+						else
+							centerEntity.Close();
+					}
+					//Log.DebugWrite(DragSettings.DebugLevel.Custom, string.Format("mCheck: {0} {1}", massEntity == null, (massEntity == null || massEntity.Closed)));
+					if (massEntity == null || massEntity.Closed)
+					{
+						//var mdef = MyDefinitionManager.Static.GetPrefabDefinitions();
+						var mprefab = MyDefinitionManager.Static.GetPrefabDefinition("CenterOfLiftGhost");
+						var m_grid = mprefab.CubeGrids[0];
+						Vector3D pos = Vector3D.Zero;
+						if (centerOfLift == Vector3D.Zero)
+							pos = grid.Physics.CenterOfMassWorld;
+						else
+							pos = grid.GridIntegerToWorld(grid.WorldToGridInteger(Entity.Physics.CenterOfMassWorld) + new Vector3I((int)centerOfLift.X, (int)centerOfLift.Y, (int)centerOfLift.Z));
+						m_grid.PositionAndOrientation = new VRage.MyPositionAndOrientation(pos, grid.LocalMatrix.Forward, grid.LocalMatrix.Up);
+						m_grid.LinearVelocity = Entity.Physics.LinearVelocity;
+						MyAPIGateway.Entities.RemapObjectBuilder(m_grid);
+						massEntity = MyAPIGateway.Entities.CreateFromObjectBuilder(m_grid);
+						//massEntity = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(p_grid);
+						Log.DebugWrite(DragSettings.DebugLevel.Custom, string.Format("Check2: {0} ", massEntity.EntityId));
+						massEntity.CastShadows = false;
+						massEntity.Flags |= EntityFlags.Visible;
+						massEntity.Flags &= ~EntityFlags.Save;//do not save
+						massEntity.Flags &= ~EntityFlags.Sync;//do not sync
+						massEntity.Physics.Enabled = false;	
+						MyAPIGateway.Entities.AddEntity(massEntity);
+					}
+					else
+					{
+
+						if (massEntity is IMyCubeGrid)
+						{
+							var mgrid = (IMyCubeGrid)massEntity;
+							List<IMySlimBlock> l = new List<IMySlimBlock>();
+							Vector3D pos = grid.Physics.CenterOfMassWorld;
+							MatrixD mat = new MatrixD(grid.WorldMatrix);
+							mat.Translation = pos;
+							mgrid.SetWorldMatrix(mat);
+							mgrid.SetColorMaskForSubparts(new Vector3(1));
+						}
+						else
+							massEntity.Close();
+
+					}
+				}
+				else
+				{
+					if (centerEntity != null && !centerEntity.Closed)
+						centerEntity.Close();
+					if (massEntity != null && !massEntity.Closed)
+						massEntity.Close();
+				}
+			}
+			catch (Exception ex)
+			{
+				//MyAPIGateway.Utilities.ShowMessage(Core.NAME, String.Format("{0}", ex.Message));
+				Log.DebugWrite(DragSettings.DebugLevel.Error, "Error in refreshCenterOfLift");
+			}
+		}
+		void refreshLightGrid()
+		{
+	
+            try
+			{
+				if (showlight)
 				{
 					if (lightEntity == null || lightEntity.Closed)
 					{
@@ -358,21 +478,22 @@ namespace SEDrag
 						var p_grid = prefab.CubeGrids[0];
 						p_grid.PositionAndOrientation = new VRage.MyPositionAndOrientation(grid.Physics.CenterOfMassWorld + Vector3.Multiply(Vector3.Normalize(Entity.Physics.LinearVelocity), 20), -Entity.WorldMatrix.Forward, Entity.WorldMatrix.Up);
 						p_grid.LinearVelocity = Entity.Physics.LinearVelocity;
-                        MyAPIGateway.Entities.RemapObjectBuilder(p_grid);
-                        lightEntity = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(p_grid);
+						MyAPIGateway.Entities.RemapObjectBuilder(p_grid);
+						lightEntity = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(p_grid);
 						lightEntity.CastShadows = false;
 						lightEntity.Flags |= EntityFlags.Visible;
+						lightEntity.Flags &= ~EntityFlags.Save;//do not save
 					}
 					else
 					{
-						
+
 						if (lightEntity is IMyCubeGrid)
 						{
 							var lgrid = (IMyCubeGrid)lightEntity;
 							List<IMySlimBlock> l = new List<IMySlimBlock>();
 							Vector3 pos = (grid.Physics.CenterOfMassWorld + Vector3.Multiply(Vector3.Normalize(Entity.Physics.LinearVelocity), 20));
 							var block = grid.RayCastBlocks(pos, (grid.GetPosition() - Vector3.Multiply(Vector3.Normalize(Entity.Physics.LinearVelocity), 200)));
-							if(block.HasValue)
+							if (block.HasValue)
 							{
 								pos = grid.GridIntegerToWorld(block.Value) + Vector3.Multiply(Vector3.Normalize(Entity.Physics.LinearVelocity), 6);
 							}
@@ -386,10 +507,10 @@ namespace SEDrag
 
 								if (e.FatBlock is IMyReflectorLight)
 								{
-									int delta = (int)(heatDelta/4 > 25 ? 25 : heatDelta/4);
+									int delta = (int)(heatDelta / 4 > 25 ? 25 : heatDelta / 4);
 									Color color = MyMath.VectorFromColor(255, (byte)(delta), 0, 100);
 									var light = (IMyReflectorLight)e.FatBlock;
-									light.SetValueFloat("Intensity", (float)heatDelta/2);
+									light.SetValueFloat("Intensity", (float)heatDelta / 2);
 									light.SetValueFloat("Radius", grid.LocalAABB.Extents.Length() + 6);
 									light.SetValue("Color", color);
 
@@ -414,7 +535,6 @@ namespace SEDrag
 				//Log.Info("Error");
 			}
 		}
-
 		private double calcCenter(double t, int cnt)
 		{
 			if (cnt == 0) return 0.0f;
@@ -435,6 +555,7 @@ namespace SEDrag
 
 		private void refreshBoxParallel()
 		{
+			if (dontUpdate) return;
 			if(dirty && task.IsComplete && lastupdate <= 0)
 			{
 				lastupdate = 15;//4x a second if needed. Yea for other threads!
@@ -449,6 +570,7 @@ namespace SEDrag
 		}
 		public void calcComplete()
 		{
+			initcomplete = true;
 			//Log.DebugWrite(DragSettings.DebugLevel.Custom, "Completed! " + parimeterBlocks.Count.ToString());
 		}
 		private void blockChange(IMySlimBlock obj)
@@ -570,6 +692,8 @@ namespace SEDrag
 				//1370 is melt tempw
 
 				heatLoss(atmosphere);
+				refreshLightGrid();
+				refreshCenterOfLift();
 
 				if (atmosphere < 0.05f)
 					return;
@@ -621,7 +745,7 @@ namespace SEDrag
 					var lift_adj = c_lift.Translation;
 					Log.DebugWrite(DragSettings.DebugLevel.Verbose, string.Format("Entity {0}: Adv Lift: {1}", Entity.EntityId, (liftforw + liftright + liftup).ToString()));
 					if ((liftforw + liftright + liftup).Length() > 10.0f)
-						Entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, -(liftforw + liftright + liftup), (Entity.WorldMatrix.Translation + c_lift.Translation), Vector3.Zero);
+						Entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, -(liftforw + liftright + liftup), (Entity.WorldMatrix.Translation + c_lift.Translation), Vector3.Zero);//this is wrong. TOFIX
 
 				}
 				else
@@ -775,7 +899,7 @@ namespace SEDrag
 			}
 			else
 				showlight = false;
-			refreshLightGrid();
+
 			if (!Core.instance.settings.heat)
 				return;
 			if (critical)
