@@ -35,9 +35,12 @@ namespace SEDrag.Definition
 			Regex regcom = new Regex(",");
 			Regex regeq = new Regex("=");
 			HeatData value;
-
+			Log.Info("Writing defaults");
+			data.Clear();
+			#region defaults
 			data.Add("LargeBlockBatteryBlock",					new HeatData(5.0, 750));
 			data.Add("SmallBlockBatteryBlock",					new HeatData(5.0, 750));
+			Log.Info("1");
 			//data.Add("LargeBlockArmorBlock",					new HeatData(1.0, 750));
 			//data.Add("LargeBlockArmorSlope",					new HeatData(1.0, 750));
 			//data.Add("LargeBlockArmorCorner",					new HeatData(1.0, 750));
@@ -136,6 +139,7 @@ namespace SEDrag.Definition
 			data.Add("SmallProgrammableBlock", new HeatData(5.0, 750));
 			data.Add("ControlPanel", new HeatData(5.0, 750));
 			data.Add("SmallControlPanel", new HeatData(5.0, 750));
+			Log.Info("2");
 			//data.Add("SmallGatlingTurret", new HeatData(1.0, 750));
 			//data.Add("SmallMissileTurret", new HeatData(1.0, 750));
 			//data.Add("LargeInteriorTurret", new HeatData(1.0, 750));
@@ -154,10 +158,12 @@ namespace SEDrag.Definition
 			//data.Add("LargeSteelCatwalkPlate", new HeatData(1.0, 750));
 			//data.Add("LargeCoverWall", new HeatData(1.0, 750));
 			//data.Add("LargeCoverWallHalf", new HeatData(1.0, 750));
+			Log.Info("3");
 			data.Add("LargeWarhead", new HeatData(50.0, 750));
 			data.Add("SmallWarhead", new HeatData(50.0, 750));
 			//data.Add("LargeDecoy", new HeatData(1.0, 750));
 			//data.Add("SmallDecoy", new HeatData(1.0, 750));
+			Log.Info("4");
 			data.Add("LargeBlockInteriorWall", new HeatData(1.5, 750));
 			data.Add("LargeInteriorPillar", new HeatData(1.5, 750));
 			data.Add("LargeBlockLandingGear", new HeatData(0.4, 750));
@@ -169,12 +175,14 @@ namespace SEDrag.Definition
 			//data.Add("BigPreciousFurnace", new HeatData(1.0, 750));
 			//data.Add("BigSolidsRefinery", new HeatData(1.0, 750));
 			//data.Add("BigGasCentrifugalRefinery", new HeatData(1.0, 750));
+			Log.Info("5");
 			data.Add("LargeAssembler", new HeatData(1.2, 750));
 			//data.Add("AmmoAssembler", new HeatData(1.2, 750));
 			//data.Add("BaseComponentsAssembler", new HeatData(1.2, 750));
 			//data.Add("ElectronicsAssembler", new HeatData(1.2, 750));
 			//data.Add("ConstructionComponentsAssembler", new HeatData(1.2, 750));
 			//data.Add("LargeOreDetector", new HeatData(1.0, 750));
+			Log.Info("6");
 			data.Add("LargeMedicalRoom", new HeatData(3.0, 750));
 			data.Add("LargeJumpDrive", new HeatData(2.0, 750));
 			data.Add("LargeBlockCockpit", new HeatData(0.9, 750));
@@ -201,6 +209,7 @@ namespace SEDrag.Definition
 			data.Add("SmallLCDPanel", new HeatData(2.0, 750));
 			//data.Add("OxygenTankSmall", new HeatData(1.0, 750));
 			//data.Add("OxygenGeneratorSmall", new HeatData(1.0, 750));
+			Log.Info("7");
 			data.Add("LargeTextPanel", new HeatData(2.0, 750));
 			data.Add("LargeLCDPanel", new HeatData(2.0, 750));
 			data.Add("LargeLCDPanelWide", new HeatData(2.0, 750));
@@ -230,6 +239,7 @@ namespace SEDrag.Definition
 			data.Add("LargeBlockSmallAtmosphericThrust", new HeatData(0.8, 1000));
 			data.Add("SmallBlockLargeAtmosphericThrust", new HeatData(0.8, 1000));
 			data.Add("SmallBlockSmallAtmosphericThrust", new HeatData(0.8, 1000));
+			Log.Info("8");
 			data.Add("SmallCameraBlock", new HeatData(0.5, 750));
 			data.Add("LargeCameraBlock", new HeatData(0.5, 750));
 			data.Add("LargeBlockGyro", new HeatData(10.0, 750));
@@ -256,6 +266,7 @@ namespace SEDrag.Definition
 			//data.Add("LargeAdvancedRotor", new HeatData(1.0, 750));
 			//data.Add("SmallAdvancedStator", new HeatData(1.0, 750));
 			//data.Add("SmallAdvancedRotor", new HeatData(1.0, 750));
+			Log.Info("9");
 			data.Add("ButtonPanelLarge", new HeatData(3.0, 750));
 			data.Add("ButtonPanelSmall", new HeatData(3.0, 750));
 			data.Add("TimerBlockLarge", new HeatData(3.0, 750));
@@ -299,6 +310,7 @@ namespace SEDrag.Definition
 			//data.Add("LargeBlockConveyorSorter", new HeatData(1.0, 750));
 			//data.Add("MediumBlockConveyorSorter", new HeatData(1.0, 750));
 			//data.Add("SmallBlockConveyorSorter", new HeatData(1.0, 750));
+			Log.Info("10");
 			data.Add("VirtualMassLarge", new HeatData(2.0, 750));
 			data.Add("VirtualMassSmall", new HeatData(2.0, 750));
 			//data.Add("SpaceBallLarge", new HeatData(1.0, 750));
@@ -323,6 +335,7 @@ namespace SEDrag.Definition
 			//data.Add("SmallShipMergeBlock", new HeatData(1.0, 750));
 			//data.Add("ArmorAlpha", new HeatData(1.0, 750));
 			//data.Add("ArmorCenter", new HeatData(1.0, 750));
+			Log.Info("11");
 			data.Add("LargeProgrammableBlock", new HeatData(5.0, 750));
 			//data.Add("ArmorCorner", new HeatData(1.0, 750));
 			//data.Add("ArmorInvCorner", new HeatData(1.0, 750));
@@ -331,11 +344,12 @@ namespace SEDrag.Definition
 			//data.Add("SmallArmorCorner", new HeatData(1.0, 750));
 			//data.Add("SmallArmorInvCorner", new HeatData(1.0, 750));
 			//data.Add("SmallArmorSide", new HeatData(1.0, 750));
+			Log.Info("12");
 			data.Add("LargeBlockLaserAntenna", new HeatData(1.5, 750));
 			data.Add("SmallBlockLaserAntenna", new HeatData(1.5, 750));
 			data.Add("LargeBlockSlideDoor", new HeatData(0.7, 750));
-
-			
+			#endregion
+			Log.Info("Looping through information");
 			foreach (var keys in def)
 			{
 				try
@@ -518,6 +532,12 @@ namespace SEDrag.Definition
 				Log.DebugWrite(DragSettings.DebugLevel.Info, string.Format("{0} updated.", items.Key));
 			}
 		}
+
+		internal void Close()
+		{
+			m_data.Clear();
+		}
+
 		public void Load(bool l_default = false)
 		{
 			Log.DebugWrite(DragSettings.DebugLevel.Info, "Loading XML");
