@@ -16,6 +16,7 @@ using Sandbox.ModAPI.Ingame;
 using Sandbox.ModAPI.Interfaces;
 using ParallelTasks;
 using SEDrag.Definition;
+using Sandbox.Common.ObjectBuilders.VRageData;
 
 namespace SEDrag
 {
@@ -34,13 +35,20 @@ namespace SEDrag
 		private Vector3D centerOfLift = Vector3.Zero;
 
 
-		private Dictionary<allside, IMySlimBlock> parimeterBlocks = new Dictionary<allside, IMySlimBlock>();
+		//private Dictionary<allside, IMySlimBlock> parimeterBlocks = new Dictionary<allside, IMySlimBlock>();
 		private Dictionary<side, IMySlimBlock> m_xmax = new Dictionary<side, IMySlimBlock>();
 		private Dictionary<side, IMySlimBlock> m_ymax = new Dictionary<side, IMySlimBlock>();
 		private Dictionary<side, IMySlimBlock> m_zmax = new Dictionary<side, IMySlimBlock>();
 		private Dictionary<side, IMySlimBlock> m_xmin = new Dictionary<side, IMySlimBlock>();
 		private Dictionary<side, IMySlimBlock> m_ymin = new Dictionary<side, IMySlimBlock>();
 		private Dictionary<side, IMySlimBlock> m_zmin = new Dictionary<side, IMySlimBlock>();
+
+		private Dictionary<IMySlimBlock, IMyEntity> m_xmax_burn = new Dictionary<IMySlimBlock, IMyEntity>();
+		private Dictionary<IMySlimBlock, IMyEntity> m_ymax_burn = new Dictionary<IMySlimBlock, IMyEntity>();
+		private Dictionary<IMySlimBlock, IMyEntity> m_zmax_burn = new Dictionary<IMySlimBlock, IMyEntity>();
+		private Dictionary<IMySlimBlock, IMyEntity> m_xmin_burn = new Dictionary<IMySlimBlock, IMyEntity>();
+		private Dictionary<IMySlimBlock, IMyEntity> m_ymin_burn = new Dictionary<IMySlimBlock, IMyEntity>();
+		private Dictionary<IMySlimBlock, IMyEntity> m_zmin_burn = new Dictionary<IMySlimBlock, IMyEntity>();
 
 		private Dictionary<side, string> m_s_xmax = new Dictionary<side, string>();
 		private Dictionary<side, string> m_s_ymax = new Dictionary<side, string>();
@@ -55,7 +63,7 @@ namespace SEDrag
 		private double heat_u = 0;
 		private double heat_d = 0;
 
-		private bool showlight = false;
+		private bool m_showlight = false;
 		private bool dontUpdate = false;
 		private double drag = 0;
 		private Random m_rand = new Random((int)(DateTime.UtcNow.ToBinary()));
@@ -66,14 +74,22 @@ namespace SEDrag
 		private double heatDelta = 0;
 		private Task task;
 
-		public float small_max
+
+		private int burnfcnt = 0;
+		private int burnbcnt = 0;
+		private int burnucnt = 0;
+		private int burndcnt = 0;
+		private int burnlcnt = 0;
+		private int burnrcnt = 0;
+
+		private float small_max
 		{
 			get
 			{
 				return Core.instance.small_max;
 			}
 		}
-		public float large_max
+		private float large_max
 		{
 			get
 			{
@@ -82,7 +98,7 @@ namespace SEDrag
 
 		}
 
-		public bool showcenter
+		private bool showcenter
 		{
 			get
 			{
@@ -90,6 +106,27 @@ namespace SEDrag
 			}
 		}
 
+		private bool showsmoke
+		{
+			get
+			{
+				return Core.instance.settings.showsmoke;
+			}
+		}
+		private bool showlight
+		{
+			get
+			{
+				if (Core.instance.settings.showburn)
+					return m_showlight;
+				else
+					return false;
+			}
+			set
+			{
+				m_showlight = value;
+			}
+		}
 		public override MyObjectBuilder_EntityBase GetObjectBuilder(bool copy = false)
 		{
 			return copy ? (MyObjectBuilder_EntityBase)objectBuilder.Clone() : objectBuilder;
@@ -129,13 +166,20 @@ namespace SEDrag
 			Dictionary<side, string> s_zmin = new Dictionary<side, string>();
 			Vector3D _centerOfLift = Vector3D.Zero;
 
+			Dictionary<side, SerializableBlockOrientation> d_xmax;
+			Dictionary<side, SerializableBlockOrientation> d_ymax;
+			Dictionary<side, SerializableBlockOrientation> d_zmax;
+			Dictionary<side, SerializableBlockOrientation> d_xmin;
+			Dictionary<side, SerializableBlockOrientation> d_ymin;
+			Dictionary<side, SerializableBlockOrientation> d_zmin;
+
 			double xadj = 0;
 			double yadj = 0;
 			double zadj = 0;
 
-			Vector3I center = Vector3I.Zero;
+			Vector3D center = Vector3D.Zero;
 
-			Dictionary<allside, IMySlimBlock> parim = new Dictionary<allside, IMySlimBlock>();
+			//Dictionary<allside, IMySlimBlock> parim = new Dictionary<allside, IMySlimBlock>();
 			try
 			{
 
@@ -158,9 +202,14 @@ namespace SEDrag
 						return false;
 					if (e.FatBlock != null)
 					{
-						if (e.FatBlock.BlockDefinition.SubtypeId == "lightDummy" || e.FatBlock.BlockDefinition.SubtypeName == "CenterOfLiftMarker")
+						if (e.FatBlock.BlockDefinition.SubtypeId == "lightDummy" ||
+							e.FatBlock.BlockDefinition.SubtypeId == "batteryDummy" ||
+							e.FatBlock.BlockDefinition.SubtypeName == "Small_centerofmassghost" || 
+							e.FatBlock.BlockDefinition.SubtypeName == "Large_centerofmassghost" || 
+							e.FatBlock.BlockDefinition.SubtypeName == "Small_centerofliftghost" || 
+							e.FatBlock.BlockDefinition.SubtypeName == "Large_centerofliftghost")
 						{
-							Log.DebugWrite(DragSettings.DebugLevel.Custom, string.Format("Subtype ignore: {1} {0}", Entity.EntityId, e.FatBlock.BlockDefinition.SubtypeName));
+							//Log.DebugWrite(DragSettings.DebugLevel.Custom, string.Format("Subtype ignore: {1} {0}", Entity.EntityId, e.FatBlock.BlockDefinition.SubtypeName));
 							//Log.Info("IGNORING GRID!");
 							ignore = true;
 							return false;
@@ -190,7 +239,7 @@ namespace SEDrag
 						}
 						if (o_xmin.TryGetValue(x, out t))
 						{
-							if (t.Position.X > e.Position.X)
+							if (t.Position.X < e.Position.X)
 							{
 								o_xmin.Remove(x);
 								o_xmin.Add(x, e);
@@ -260,46 +309,35 @@ namespace SEDrag
 					return;
 				}
 
-				center = grid.WorldToGridInteger(Entity.Physics.CenterOfMassWorld);
+				center = WorldtoGrid(Entity.Physics.CenterOfMassWorld);
 
 				xadj = center.X;
 				yadj = center.Y;
 				zadj = center.Z;
 				//get parimeter blocks
 
-				subtypeCache(ref o_xmax, out s_xmax);
-				subtypeCache(ref o_ymax, out s_ymax);
-				subtypeCache(ref o_zmax, out s_zmax);
-				subtypeCache(ref o_xmin, out s_xmin);
-				subtypeCache(ref o_ymin, out s_ymin);
-				subtypeCache(ref o_zmin, out s_zmin);
-
-				generateParimeter(o_xmax, ref parim);
-				generateParimeter(o_xmin, ref parim);
-				generateParimeter(o_ymax, ref parim);
-				generateParimeter(o_ymin, ref parim);
-				generateParimeter(o_zmax, ref parim);
-				generateParimeter(o_zmin, ref parim);
-
-
+				subtypeCache(ref o_xmax, out s_xmax, out d_xmax);
+				subtypeCache(ref o_ymax, out s_ymax, out d_ymax);
+				subtypeCache(ref o_zmax, out s_zmax, out d_zmax);
+				subtypeCache(ref o_xmin, out s_xmin, out d_xmin);
+				subtypeCache(ref o_ymin, out s_ymin, out d_ymin);
+				subtypeCache(ref o_zmin, out s_zmin, out d_zmin);
 
 				var bb = new BoundingBox(Vector3.Zero, new Vector3(Math.Sqrt(lx.Count), Math.Sqrt(ly.Count), Math.Sqrt(lz.Count)) * (grid.GridSizeEnum == MyCubeSize.Small ? 0.5f : 2.5f));// * (grid.GridSizeEnum == MyCubeSize.Small ? 0.5f : 2.5f)
 				dragBox = new BoundingBox(-bb.Center, bb.Center);//center the box
+				
+				calculateArea(ref t_x, ref t_y, ref t_z, ref o_xmax, ref xadj, ref yadj, ref zadj);
+				calculateArea(ref t_x, ref t_y, ref t_z, ref o_xmin, ref xadj, ref yadj, ref zadj);
+				calculateArea(ref t_x, ref t_y, ref t_z, ref o_ymax, ref xadj, ref yadj, ref zadj);
+				calculateArea(ref t_x, ref t_y, ref t_z, ref o_ymin, ref xadj, ref yadj, ref zadj);
+				calculateArea(ref t_x, ref t_y, ref t_z, ref o_zmax, ref xadj, ref yadj, ref zadj);
+				calculateArea(ref t_x, ref t_y, ref t_z, ref o_zmin, ref xadj, ref yadj, ref zadj);
 
-				foreach (KeyValuePair<allside, IMySlimBlock> entry in parim)
-				{
-					//add them up
-
-					t_x += entry.Value.Position.X - xadj;
-					t_y += entry.Value.Position.Y - yadj;
-					t_z += entry.Value.Position.Z - zadj;
-
-				}
 				_centerOfLift = new Vector3D(calcCenter(t_x, lx.Count), calcCenter(t_y, ly.Count), calcCenter(t_z, lz.Count));
-				if (Math.Abs(_centerOfLift.X) < 1.5) _centerOfLift.X = 0;
-				if (Math.Abs(_centerOfLift.Y) < 1.5) _centerOfLift.Y = 0;
-				if (Math.Abs(_centerOfLift.Z) < 1.5) _centerOfLift.Z = 0;
-				_centerOfLift = Vector3D.Multiply(_centerOfLift, (grid.GridSizeEnum == MyCubeSize.Small ? 0.5d : 2.5d));
+				if (Math.Abs(_centerOfLift.X) < grid.GridSize) _centerOfLift.X = 0;
+				if (Math.Abs(_centerOfLift.Y) < grid.GridSize) _centerOfLift.Y = 0;
+				if (Math.Abs(_centerOfLift.Z) < grid.GridSize) _centerOfLift.Z = 0;
+				//_centerOfLift = Vector3D.Multiply(_centerOfLift, (grid.GridSizeEnum == MyCubeSize.Small ? 0.5d : 2.5d));
 				//centerOfLift += new Vector3D((grid.GridSizeEnum == MyCubeSize.Small ? 0.5f : 2.5f));
 
 			}
@@ -328,7 +366,7 @@ namespace SEDrag
 					m_s_xmin = s_xmin;
 					m_s_ymin = s_ymin;
 					m_s_zmin = s_zmin;
-					parimeterBlocks = parim;
+					//parimeterBlocks = parim;
 
 					Log.DebugWrite(DragSettings.DebugLevel.Info, string.Format("Entity ID: {0} Update:", Entity.EntityId));
 					Log.DebugWrite(DragSettings.DebugLevel.Info, string.Format("  center: {1}",Entity.EntityId, center.ToString()));
@@ -350,20 +388,44 @@ namespace SEDrag
 
 		}
 
-		private void subtypeCache(ref Dictionary<side, IMySlimBlock> input, out Dictionary<side, string> result)
+		private void calculateArea(ref double t_x, ref double t_y, ref double t_z, ref Dictionary<side, IMySlimBlock> side, ref double xadj, ref double yadj, ref double zadj)
+		{
+			foreach (KeyValuePair<side, IMySlimBlock> entry in side)
+			{
+				//add them up
+				double x = entry.Value.Position.X - xadj;
+				double y = entry.Value.Position.Y - yadj;
+				double z = entry.Value.Position.Z - zadj;
+				t_x += x;
+				t_y += y;
+				t_z += z;
+
+			}
+		}
+		private double calcCenter(double t, int cnt)
+		{
+			if (cnt == 0) return 0.0f;
+			return Math.Sqrt(Math.Abs(t / cnt)) * (t > 0 ? 1 : -1);
+		}
+		private void subtypeCache(ref Dictionary<side, IMySlimBlock> input, out Dictionary<side, string> result, out Dictionary<side, SerializableBlockOrientation> directionresult)
 		{
 			var cont = new Dictionary<side, string>();
+			var dir = new Dictionary<side, SerializableBlockOrientation>();
 			foreach (KeyValuePair<side, IMySlimBlock> kpair in input)
 			{
-				cont.Add(kpair.Key, kpair.Value.GetCopyObjectBuilder().SubtypeName);
+				var obj = kpair.Value.GetCopyObjectBuilder();
+				cont.Add(kpair.Key, obj.SubtypeName);
+				dir.Add(kpair.Key, obj.BlockOrientation);
 			}
 			result = cont;
+			directionresult = dir;
 		}
 
 		void refreshCenterOfLift()
 		{
 			try
 			{
+				if (grid.IsStatic) return;
 				//Log.DebugWrite(DragSettings.DebugLevel.Custom, string.Format("Check: {4} {0} {1} {2} {3} {5}", showcenter, !dirty, !dontUpdate, !grid.Flags.HasFlag(~EntityFlags.Save), Entity.EntityId, initcomplete));
 				if (showcenter && !dontUpdate && initcomplete)
 				{
@@ -371,20 +433,17 @@ namespace SEDrag
 					if (centerEntity == null || centerEntity.Closed)
 					{
 						//var def = MyDefinitionManager.Static.GetPrefabDefinitions();
-						var prefab = MyDefinitionManager.Static.GetPrefabDefinition("CenterOfLiftGhost");
+						var prefab = MyDefinitionManager.Static.GetPrefabDefinition((grid.GridSizeEnum == MyCubeSize.Small ? "SmCenterOfLiftGhost" : "LgCenterOfLiftGhost"));
 						var p_grid = prefab.CubeGrids[0];
 
-						Vector3D pos = Vector3D.Zero;
-						if(centerOfLift == Vector3D.Zero)
-							pos = grid.Physics.CenterOfMassWorld;
-						else
-							pos = grid.GridIntegerToWorld(grid.WorldToGridInteger(Entity.Physics.CenterOfMassWorld) + new Vector3I((int)centerOfLift.X, (int)centerOfLift.Y, (int)centerOfLift.Z));
+						Vector3D pos = grid.Physics.CenterOfMassWorld;
+
 						p_grid.PositionAndOrientation = new VRage.MyPositionAndOrientation( pos, grid.LocalMatrix.Forward, grid.LocalMatrix.Up );
 						p_grid.LinearVelocity = Entity.Physics.LinearVelocity;
                         MyAPIGateway.Entities.RemapObjectBuilder(p_grid);
 						centerEntity = MyAPIGateway.Entities.CreateFromObjectBuilder(p_grid);
 						//centerEntity = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(p_grid);
-						Log.DebugWrite(DragSettings.DebugLevel.Custom, string.Format("Check2: {0} ", centerEntity.EntityId));
+						//Log.DebugWrite(DragSettings.DebugLevel.Custom, string.Format("Check2: {0} ", centerEntity.EntityId));
 						centerEntity.CastShadows = false;
 						centerEntity.Flags |= EntityFlags.Visible;
 						centerEntity.Flags &= ~EntityFlags.Save;//do not save
@@ -399,8 +458,8 @@ namespace SEDrag
 						if (centerEntity is IMyCubeGrid)
 						{
 							var lgrid = (IMyCubeGrid)centerEntity;
-							List<IMySlimBlock> l = new List<IMySlimBlock>();
-							Vector3D pos = grid.GridIntegerToWorld(grid.WorldToGridInteger(Entity.Physics.CenterOfMassWorld) + new Vector3I((int)centerOfLift.X, (int)centerOfLift.Y, (int)centerOfLift.Z));
+							//List<IMySlimBlock> l = new List<IMySlimBlock>();
+							Vector3D pos = Vector3D.Transform( Vector3D.Multiply((WorldtoGrid(Entity.Physics.CenterOfMassWorld) + centerOfLift), grid.GridSize), grid.WorldMatrix);
 							MatrixD mat = new MatrixD(grid.WorldMatrix);
 							mat.Translation = pos;
                             lgrid.SetWorldMatrix(mat);
@@ -412,19 +471,16 @@ namespace SEDrag
 					if (massEntity == null || massEntity.Closed)
 					{
 						//var mdef = MyDefinitionManager.Static.GetPrefabDefinitions();
-						var mprefab = MyDefinitionManager.Static.GetPrefabDefinition("CenterOfLiftGhost");
+						var mprefab = MyDefinitionManager.Static.GetPrefabDefinition((grid.GridSizeEnum == MyCubeSize.Small ? "SmCenterOfMassGhost" : "LgCenterOfMassGhost"));
 						var m_grid = mprefab.CubeGrids[0];
-						Vector3D pos = Vector3D.Zero;
-						if (centerOfLift == Vector3D.Zero)
-							pos = grid.Physics.CenterOfMassWorld;
-						else
-							pos = grid.GridIntegerToWorld(grid.WorldToGridInteger(Entity.Physics.CenterOfMassWorld) + new Vector3I((int)centerOfLift.X, (int)centerOfLift.Y, (int)centerOfLift.Z));
-						m_grid.PositionAndOrientation = new VRage.MyPositionAndOrientation(pos, grid.LocalMatrix.Forward, grid.LocalMatrix.Up);
+						Vector3D pos = grid.Physics.CenterOfMassWorld;
+			
+                        m_grid.PositionAndOrientation = new VRage.MyPositionAndOrientation(pos, grid.LocalMatrix.Forward, grid.LocalMatrix.Up);
 						m_grid.LinearVelocity = Entity.Physics.LinearVelocity;
 						MyAPIGateway.Entities.RemapObjectBuilder(m_grid);
 						massEntity = MyAPIGateway.Entities.CreateFromObjectBuilder(m_grid);
 						//massEntity = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(p_grid);
-						Log.DebugWrite(DragSettings.DebugLevel.Custom, string.Format("Check2: {0} ", massEntity.EntityId));
+						//Log.DebugWrite(DragSettings.DebugLevel.Custom, string.Format("Check2: {0} ", massEntity.EntityId));
 						massEntity.CastShadows = false;
 						massEntity.Flags |= EntityFlags.Visible;
 						massEntity.Flags &= ~EntityFlags.Save;//do not save
@@ -438,12 +494,13 @@ namespace SEDrag
 						if (massEntity is IMyCubeGrid)
 						{
 							var mgrid = (IMyCubeGrid)massEntity;
-							List<IMySlimBlock> l = new List<IMySlimBlock>();
+							//List<IMySlimBlock> l = new List<IMySlimBlock>();
 							Vector3D pos = grid.Physics.CenterOfMassWorld;
 							MatrixD mat = new MatrixD(grid.WorldMatrix);
 							mat.Translation = pos;
+							//mat.Up = new Vector3D(0, 1, 0);
 							mgrid.SetWorldMatrix(mat);
-							mgrid.SetColorMaskForSubparts(new Vector3(1));
+							//mgrid.SetColorMaskForSubparts(new Vector3(1));
 						}
 						else
 							massEntity.Close();
@@ -464,11 +521,18 @@ namespace SEDrag
 				Log.DebugWrite(DragSettings.DebugLevel.Error, "Error in refreshCenterOfLift");
 			}
 		}
+		Vector3D WorldtoGrid(Vector3D coords)
+		{
+			Vector3D localCoords = Vector3D.Transform(coords, grid.WorldMatrixNormalizedInv);
+			localCoords /= grid.GridSize;
+			return localCoords;
+		}
 		void refreshLightGrid()
 		{
 	
             try
 			{
+				if (grid.IsStatic) return;
 				if (showlight)
 				{
 					if (lightEntity == null || lightEntity.Closed)
@@ -520,8 +584,8 @@ namespace SEDrag
 						}
 						else
 							lightEntity.Close();
-
 					}
+
 				}
 				else
 				{
@@ -535,23 +599,7 @@ namespace SEDrag
 				//Log.Info("Error");
 			}
 		}
-		private double calcCenter(double t, int cnt)
-		{
-			if (cnt == 0) return 0.0f;
-			return Math.Sqrt(Math.Abs(t / cnt)) * ( t > 0 ? 1 : -1) ;
-		}
 
-		private void generateParimeter(Dictionary<side, IMySlimBlock> edge, ref Dictionary<allside, IMySlimBlock> parim)
-		{
-			foreach (KeyValuePair<side, IMySlimBlock> entry in edge)
-			{
-				allside sides = new allside(entry.Value.Position.X, entry.Value.Position.Y, entry.Value.Position.Z);
-				if (!parim.ContainsKey(sides))
-				{
-					parim.Add(sides, entry.Value);
-				}
-			}
-		}
 
 		private void refreshBoxParallel()
 		{
@@ -592,8 +640,6 @@ namespace SEDrag
 				refreshBoxParallel();
 			}
 		}
-		
-
 		private void onClose(IMyEntity obj)
 		{
 			if (!task.IsComplete) task.valid = false;
@@ -602,6 +648,16 @@ namespace SEDrag
 			grid.OnBlockRemoved -= blockChange;
 			if (lightEntity != null && !lightEntity.Closed)
 				lightEntity.Close();//close our 'effect'
+			if (massEntity != null && !massEntity.Closed)
+				massEntity.Close();
+			if (centerEntity != null && !centerEntity.Closed)
+				centerEntity.Close();
+			removeBurnEffect(ref m_xmax_burn);
+			removeBurnEffect(ref m_ymax_burn);
+			removeBurnEffect(ref m_zmax_burn);
+			removeBurnEffect(ref m_xmin_burn);
+			removeBurnEffect(ref m_ymin_burn);
+			removeBurnEffect(ref m_zmin_burn);
 		}
 
 		public override void UpdateBeforeSimulation()
@@ -740,28 +796,30 @@ namespace SEDrag
 				if (Core.instance.settings.advancedlift)
 				{
 					
-					MatrixD c_lift = MatrixD.CreateTranslation(centerOfLift);
-					c_lift *= grid.LocalMatrix.GetOrientation();
-					var lift_adj = c_lift.Translation;
+					//MatrixD c_lift = MatrixD.CreateTranslation(centerOfLift);
+					//c_lift *= grid.LocalMatrix.GetOrientation();
+					//var lift_adj = c_lift.Translation;
+					Vector3D pos = Vector3D.Zero;
+					if (centerOfLift == Vector3D.Zero)
+						pos = grid.Physics.CenterOfMassWorld;
+					else
+						pos = Vector3D.Transform(Vector3D.Multiply((WorldtoGrid(Entity.Physics.CenterOfMassWorld) + centerOfLift), grid.GridSize), grid.WorldMatrix);
 					Log.DebugWrite(DragSettings.DebugLevel.Verbose, string.Format("Entity {0}: Adv Lift: {1}", Entity.EntityId, (liftforw + liftright + liftup).ToString()));
 					if ((liftforw + liftright + liftup).Length() > 10.0f)
-						Entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, -(liftforw + liftright + liftup), (Entity.WorldMatrix.Translation + c_lift.Translation), Vector3.Zero);//this is wrong. TOFIX
+						Entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, (liftforw + liftright + liftup), pos, Vector3.Zero);
 
 				}
 				else
 				{
 					Log.DebugWrite(DragSettings.DebugLevel.Verbose, string.Format("Entity {0}: Lift: {1}", Entity.EntityId, (liftforw + liftright + liftup).ToString()));
 					if ((liftforw + liftright + liftup).Length() > 10.0f)
-						Entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, -(liftforw + liftright + liftup), Entity.Physics.CenterOfMassWorld, Vector3.Zero);
+						Entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, (liftforw + liftright + liftup), Entity.Physics.CenterOfMassWorld, Vector3.Zero);
 				}
-
-				//if (dragForce.Length() > grid.Physics.Mass * 100 && grid.Physics.Mass > 0)
-				//	spin = Vector3.Multiply(MyUtils.GetRandomVector3Normalized(), dragForce.Length() / (grid.Physics.Mass * 100));
 				Log.DebugWrite(DragSettings.DebugLevel.Verbose, string.Format("Entity {0}: Drag: {1}", Entity.EntityId, dragForce.ToString()));
 				if (dragForce.Length() > 10.0f)//if force is too small, forget it. 
 					Entity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, dragForce, Entity.Physics.CenterOfMassWorld, Vector3.Zero);
 				
-				applyHeat(-Vector3D.Multiply(Vector3D.Normalize(dragMatrix.Forward), c * Core.instance.settings.mult / 100 * adj), aw, ah, ad);
+				applyHeat(-Vector3D.Multiply(Vector3D.Normalize(dragMatrix.Forward), (c + liftforw.Length() + liftright.Length() + liftup.Length()) * Core.instance.settings.mult / 100 * adj), aw, ah, ad);
 
 
 
@@ -773,7 +831,19 @@ namespace SEDrag
 
 			}
 		}
+		private double getLiftCI(float width, float x)
+		{
+			double _ret = Math.Pow(width, 2) * x;
+			return _ret * Math.Pow(Math.Cos(Math.Abs(x) * Math.PI) * -1 + 1, 2) / 32;
+		}
 
+		private double getArea(BoundingBox dragBox, Vector3 _v, ref double areawidth, ref double areaheight, ref double areadepth)
+		{
+			areawidth = dragBox.Width * Math.Abs(_v.X);
+			areaheight = dragBox.Height * Math.Abs(_v.Y);
+			areadepth = dragBox.Depth * Math.Abs(_v.Z);
+			return Math.Pow(areawidth + areaheight + areadepth, 2);
+		}
 		private void applyHeat(Vector3D dragVector, double aw, double ah, double ad)
 		{
 			var x = dragVector.X / aw;
@@ -834,7 +904,7 @@ namespace SEDrag
 
 		private void disappate(ref double heat, float atmo, double area)
 		{
-			heat -= (heat * 0.001f * atmo * Core.instance.settings.radMult/50);//area should be removed this is for now. 
+			heat -= (heat * 0.001f * atmo * Core.instance.settings.radMult/50);
 		}
 
 		private void showLift()
@@ -899,7 +969,7 @@ namespace SEDrag
 			}
 			else
 				showlight = false;
-
+			playsmoke(critical);
 			if (!Core.instance.settings.heat)
 				return;
 			if (critical)
@@ -919,6 +989,203 @@ namespace SEDrag
 				else if (heat > 250)
 					MyAPIGateway.Utilities.ShowNotification(String.Format("Heat Level: {0:N0}", heat), 20, Sandbox.Common.MyFontEnum.White);
 			}
+		}
+
+		private void playsmoke(bool critical)
+		{
+			return;
+			//Log.DebugWrite(DragSettings.DebugLevel.Custom, "playsmoke");
+			if (showsmoke && critical)
+			{
+				//Log.DebugWrite(DragSettings.DebugLevel.Custom, "effects");
+				if (heat_f > 750)
+				{
+					if (m_zmax_burn.Count == 0 || burnfcnt++ > 180)
+					{
+						burnfcnt = 0;
+						removeBurnEffect(ref m_zmax_burn);
+						createBurnEffect(m_zmax, ref m_zmax_burn);
+					}
+					updateBurnEffect(ref m_zmax_burn);
+				}
+				else
+				{
+					removeBurnEffect(ref m_zmax_burn);
+				}
+				if (heat_b > 750)
+				{
+					if (m_zmin_burn.Count == 0 || burnbcnt++ > 180)
+					{
+						burnbcnt = 0;
+						removeBurnEffect(ref m_zmin_burn);
+						createBurnEffect(m_zmin, ref m_zmin_burn);
+					}
+					updateBurnEffect(ref m_zmin_burn);
+				}
+				else
+				{
+					removeBurnEffect(ref m_zmin_burn);
+				}
+				if (heat_u > 750)
+				{
+					if (m_ymax_burn.Count == 0 || burnucnt++ > 180)
+					{
+						burnucnt = 0;
+						removeBurnEffect(ref m_ymax_burn);
+						createBurnEffect(m_ymax, ref m_ymax_burn);
+					}
+					updateBurnEffect(ref m_ymax_burn);
+				}
+				else
+				{
+					removeBurnEffect(ref m_ymax_burn);
+				}
+				if (heat_d > 750)
+				{
+					if (m_ymin_burn.Count == 0 || burndcnt++ > 180 )
+					{
+						burndcnt = 0;
+						removeBurnEffect(ref m_ymin_burn);
+						createBurnEffect(m_ymin, ref m_ymin_burn);
+					}
+					updateBurnEffect(ref m_ymin_burn);
+				}
+				else
+				{
+					removeBurnEffect(ref m_ymin_burn);
+				}
+				if (heat_r > 750)
+				{
+					if (m_xmax_burn.Count == 0 || burnrcnt++ > 180)
+					{
+						burnrcnt = 0;
+						removeBurnEffect(ref m_xmax_burn);
+						createBurnEffect(m_xmax, ref m_xmax_burn);
+					}
+					updateBurnEffect(ref m_xmax_burn);
+				}
+				else
+				{
+					removeBurnEffect(ref m_xmax_burn);
+				}
+				if (heat_l > 750)
+				{
+					if (m_xmin_burn.Count == 0 || burnlcnt++ > 180)
+					{
+						burnlcnt = 0;
+						removeBurnEffect(ref m_xmin_burn);
+						createBurnEffect(m_xmin, ref m_xmin_burn);
+					}
+					updateBurnEffect(ref m_xmin_burn);
+				}
+				else
+				{
+					removeBurnEffect(ref m_xmin_burn);
+				}
+			}
+			else
+			{
+				removeBurnEffect(ref m_xmax_burn);
+				removeBurnEffect(ref m_ymax_burn);
+				removeBurnEffect(ref m_zmax_burn);
+				removeBurnEffect(ref m_xmin_burn);
+				removeBurnEffect(ref m_ymin_burn);
+				removeBurnEffect(ref m_zmin_burn);
+			}
+		}
+
+		private void updateBurnEffect(ref Dictionary<IMySlimBlock, IMyEntity> burn)
+		{
+			List<IMySlimBlock> rem = new List<IMySlimBlock>();
+			foreach(KeyValuePair<IMySlimBlock, IMyEntity> kval in burn)
+			{
+				try
+				{
+					if (kval.Key.IsDestroyed)
+						rem.Add(kval.Key);
+					Vector3D pos = grid.GridIntegerToWorld(kval.Key.Position);
+					MatrixD mat = new MatrixD(kval.Value.WorldMatrix);
+					mat.Translation = pos;
+					kval.Value.SetWorldMatrix(mat);
+				}
+				catch
+				{
+					try
+					{
+
+						rem.Add(kval.Key);
+					}
+					catch
+					{
+						Log.DebugWrite(DragSettings.DebugLevel.Error, "Error in update burn.");
+					}
+					
+				}
+			}
+			foreach(IMySlimBlock e in rem)
+			{
+				IMyEntity val;
+				if(burn.TryGetValue(e, out val))
+                {
+					if (!val.MarkedForClose)
+						val.Close();
+				}
+				burn.Remove(e);
+			}
+		}
+
+		private void removeBurnEffect(ref Dictionary<IMySlimBlock, IMyEntity> burn)
+		{
+			if(burn.Count > 0)
+			foreach(KeyValuePair<IMySlimBlock, IMyEntity> kval in burn)
+			{
+				if (kval.Value == null) continue;
+				if(!kval.Value.MarkedForClose)
+					kval.Value.Close();//close
+			}
+			burn.Clear();
+		}
+
+		private void createBurnEffect(Dictionary<side, IMySlimBlock> side, ref Dictionary<IMySlimBlock, IMyEntity> burn)
+		{
+			try
+			{
+
+				//Log.DebugWrite(DragSettings.DebugLevel.Custom, "create burn");
+				foreach (KeyValuePair<side, IMySlimBlock> kpair in side)
+				{
+					if (m_rand.NextDouble() < 0.25)
+					{
+						//Log.DebugWrite(DragSettings.DebugLevel.Custom, "spawnsmokedummy");
+						//var def = MyDefinitionManager.Static.GetPrefabDefinitions();
+						var prefab = MyDefinitionManager.Static.GetPrefabDefinition("SmokeDummy");
+						var p_grid = prefab.CubeGrids[0];
+
+						Vector3D pos = grid.GridIntegerToWorld(kpair.Value.Position);
+
+						p_grid.PositionAndOrientation = new VRage.MyPositionAndOrientation(pos, grid.LocalMatrix.Forward, grid.LocalMatrix.Up);
+						p_grid.LinearVelocity = Entity.Physics.LinearVelocity;
+						MyAPIGateway.Entities.RemapObjectBuilder(p_grid);
+						IMyEntity nGrid = MyAPIGateway.Entities.CreateFromObjectBuilder(p_grid);
+
+						nGrid.CastShadows = false;
+						nGrid.Flags |= EntityFlags.Visible;
+						nGrid.Flags &= ~EntityFlags.Save;//do not save
+						nGrid.Flags &= ~EntityFlags.Sync;//do not sync
+						nGrid.Physics.Enabled = false;
+						MyAPIGateway.Entities.AddEntity(nGrid);
+						burn.Add(kpair.Value, nGrid);
+						//var bgrid = (IMyCubeGrid)nGrid;
+						//var block = bgrid.GetCubeBlock(new Vector3I(0));
+						//block.FatBlock.SetDamageEffect(true);
+					}
+				}
+			}
+			catch
+			{
+
+			}
+
 		}
 
 		private void doDamage()
@@ -978,6 +1245,7 @@ namespace SEDrag
 							mult = data.getHeatMult(dir);
 						}
 					}
+
 					/*if (block is IMyOxygenTank && block.CurrentDamage > 0.5f)
 					{
 
@@ -991,14 +1259,17 @@ namespace SEDrag
 					{
 						dirty = true;
 						grid.RemoveDestroyedBlock(block);
+						keylist.Add(kpair.Key);
+						continue;
 					}
 					float damage = (float)(dmg - min);
+					if (damage <= 0.0d) continue;
 					damage /= 100;
 					damage += 1;
 					damage *= (3 * (float)mult);
-					//grid.ApplyDestructionDeformation(block);
+
 					var r_damage = damage * (float)m_rand.NextDouble();
-					if (damage <= 0.0d) continue;
+
 					IMyDestroyableObject damagedBlock = block as IMyDestroyableObject;
 					damagedBlock.DoDamage(r_damage, Sandbox.Common.ObjectBuilders.Definitions.MyDamageType.Fire, true/*, hit, 0*/);
 				}
@@ -1016,19 +1287,7 @@ namespace SEDrag
 			}
         }
 
-		private double getLiftCI(float width, float x)
-		{
-			double _ret = Math.Pow(width, 2) * x;
-			return _ret * Math.Pow(Math.Cos(Math.Abs(x) * Math.PI)*-1+1,2)/32;
-		}
 
-		private double getArea(BoundingBox dragBox, Vector3 _v, ref double areawidth, ref double areaheight, ref double areadepth)
-		{
-			areawidth = dragBox.Width * Math.Abs(_v.X);
-			areaheight = dragBox.Height * Math.Abs(_v.Y);
-			areadepth = dragBox.Depth * Math.Abs(_v.Z);
-            return Math.Pow(areawidth + areaheight + areadepth, 2);
-		}
 
 		private struct side : IEquatable<side>
 		{
