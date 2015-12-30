@@ -208,7 +208,7 @@ namespace SEDrag
 								break;
 
 						}
-						MyAPIGateway.Utilities.ShowMessage(MOD_NAME, string.Format("Debug set to: {0}", Core.instance.settings.debug.ToString()));
+						MyAPIGateway.Utilities.ShowMessage(MOD_NAME, string.Format("Debug set to: {0}", instance.settings.debug.ToString()));
 					}
 					catch (FormatException)
 					{
@@ -218,13 +218,44 @@ namespace SEDrag
 				else
 				{
 					//toggle debug
-					if (Core.instance.settings.debug == DragSettings.DebugLevel.None)
-						Core.instance.settings.debug = DragSettings.DebugLevel.Error;
+					if (instance.settings.debug == DragSettings.DebugLevel.None)
+						instance.settings.debug = DragSettings.DebugLevel.Error;
 					else
-						Core.instance.settings.debug = DragSettings.DebugLevel.None;
-                    MyAPIGateway.Utilities.ShowMessage(MOD_NAME, string.Format("Debug set to: {0}", Core.instance.settings.debug.ToString()));
+						instance.settings.debug = DragSettings.DebugLevel.None;
+                    MyAPIGateway.Utilities.ShowMessage(MOD_NAME, string.Format("Debug set to: {0}", instance.settings.debug.ToString()));
 				}
+
 				return;
+			}
+			if (msg.StartsWith("/drag-effect", StringComparison.InvariantCultureIgnoreCase))
+			{
+				visible = false;
+				string[] words = msg.Split(' ');
+				if (words.Length > 1)
+				{
+					switch (words[1].ToLower())
+					{
+						case "on":
+							instance.settings.showsmoke = true;
+							instance.settings.showburn = true;
+							break;
+						/*case "smoke":
+							instance.settings.showsmoke = !instance.settings.showsmoke;
+							break;*/
+						case "burn":
+							instance.settings.showburn = !instance.settings.showburn;
+							break;
+						case "off":
+							instance.settings.showsmoke = false;
+							instance.settings.showburn = false;
+							break;
+					}
+					MyAPIGateway.Utilities.ShowMessage(MOD_NAME, string.Format("Effects: Burn - {0}"/* and Smoke - {1}*/, (instance.settings.showburn ? "on" : "off")/*, (instance.settings.showsmoke ? "on" : "off")*/));
+					return;
+				}
+				MyAPIGateway.Utilities.ShowMessage(MOD_NAME, "Command: /drag-effect [on/off/burn/?]");
+				return;
+
 			}
 			if (isServer)
 			{

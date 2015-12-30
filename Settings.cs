@@ -6,6 +6,8 @@
 		private int m_radMult = 500;
 		private bool m_lift = false;
 		private bool m_heat = true;
+		private bool m_smoke = true;
+		private bool m_burn = false;
 		private DebugLevel logLevel = DebugLevel.None;
 		public enum DebugLevel
 		{
@@ -79,6 +81,28 @@
 			}
 		}
 
+		public bool showsmoke
+		{
+			get
+			{
+				return m_smoke;
+			}
+			set
+			{
+				m_smoke = value;
+			}
+		}
 
+		public bool showburn
+		{
+			get
+			{
+				return m_burn;
+			}
+			set
+			{
+				m_burn = value;
+			}
+		}
 	}
 }
