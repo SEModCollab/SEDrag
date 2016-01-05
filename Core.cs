@@ -35,6 +35,9 @@ namespace SEDrag
 		public bool showCenterOfLift = false;
 		//public LiftDefinition definitions = new LiftDefinition();
 		public HeatDefinition h_definitions = new HeatDefinition();
+
+		public Dictionary<long, GridHeatData> heatTransferCache = new Dictionary<long, GridHeatData>();
+
 		public static string NAME
 		{
 			get
@@ -68,27 +71,6 @@ namespace SEDrag
 			}
 			else
 			{
-				try
-				{
-
-					HashSet<IMyEntity> ent = new HashSet<IMyEntity>();
-					MyAPIGateway.Entities.GetEntities(ent, delegate (IMyEntity e)
-					{
-						//Log.Info(e.DisplayName);
-						if (e.DisplayName == "LightDummy35")
-							return true;
-						return false;
-					});
-					foreach (IMyEntity entity in ent)
-					{
-						entity.Close();
-					}
-					
-				}
-				catch
-				{
-					//
-				}
 				sentHello = true;//were a listener not a sender
 				if (MyAPIGateway.Session.OnlineMode != MyOnlineModeEnum.OFFLINE)
 				{
@@ -500,9 +482,12 @@ namespace SEDrag
 			if(_registerClient)
 				MyAPIGateway.Multiplayer.UnregisterMessageHandler(RESPONSE_MSG, recieveData);
 			//CommunicationManager.unload();
+			heatTransferCache.Clear();
 			Log.Info("Closed.");
 			Log.Close();
 		}
 
 	}
+
+
 }

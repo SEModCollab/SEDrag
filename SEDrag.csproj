@@ -82,6 +82,7 @@
     <Compile Include="Core.cs" />
     <Compile Include="DragDefinition\DragData.cs" />
     <Compile Include="DragDefinition\DragDefinition.cs" />
+    <Compile Include="GridHeatData.cs" />
     <Compile Include="HeatDefinition\HeatData.cs" />
     <Compile Include="HeatDefinition\HeatDefinition.cs" />
     <Compile Include="LiftDefinition\LiftData.cs" />

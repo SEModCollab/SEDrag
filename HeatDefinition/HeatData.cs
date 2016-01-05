@@ -148,11 +148,41 @@ namespace SEDrag.Definition
 
 		public double getHeatMult(Base6Directions.Direction dir)
 		{
-			return heatMult_f; //todo translate direction to local
+			switch(dir)
+			{
+				case Base6Directions.Direction.Forward:
+					return heatMult_f;
+				case Base6Directions.Direction.Backward:
+					return heatMult_b;
+				case Base6Directions.Direction.Left:
+					return heatMult_l;
+				case Base6Directions.Direction.Right:
+					return heatMult_r;
+				case Base6Directions.Direction.Up:
+					return heatMult_u;
+				case Base6Directions.Direction.Down:
+					return heatMult_d;
+			}
+			return heatMult_f;//should NEVER be triggered but compiler error otherwise. 
         }
 		public double getHeatTresh(Base6Directions.Direction dir)
 		{
-			return heatThresh_f; //todo translate direction to local
+			switch (dir)
+			{
+				case Base6Directions.Direction.Forward:
+					return heatThresh_f;
+				case Base6Directions.Direction.Backward:
+					return heatThresh_b;
+				case Base6Directions.Direction.Left:
+					return heatThresh_l;
+				case Base6Directions.Direction.Right:
+					return heatThresh_r;
+				case Base6Directions.Direction.Up:
+					return heatThresh_u;
+				case Base6Directions.Direction.Down:
+					return heatThresh_d;
+			}
+			return heatThresh_f; //should never hit this. 
 		}
 	}
 }
